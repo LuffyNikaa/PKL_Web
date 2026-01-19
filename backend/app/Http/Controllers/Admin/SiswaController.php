@@ -1,21 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Users;
 use App\Models\Siswa;
 use App\Models\Dudi;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
-class RegisterSiswaController extends Controller
+class SiswaController extends Controller
 {
-    public function register(Request $request)
+    public function store(Request $request)
     {
-        // Validasi input
         $validator = Validator::make($request->all(), [
             'nama_siswa' => 'required|string|max:60',
             'email' => 'required|email|unique:users,email_users',
@@ -98,7 +97,7 @@ class RegisterSiswaController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Registrasi gagal: ' . $e->getMessage(),
+                'message' => 'Gagal menambahkan siswa: ' . $e->getMessage(),
                 'error_detail' => env('APP_DEBUG') ? $e->getTraceAsString() : null
             ], 500);
         }

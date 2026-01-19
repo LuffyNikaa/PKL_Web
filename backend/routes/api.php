@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\GuruController;
-use App\Http\Controllers\Auth\RegisterSiswaController;
+use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DudiController;
 
@@ -23,7 +23,6 @@ use App\Http\Controllers\Admin\DudiController;
 // =====================
 Route::post('/login/web', [LoginController::class, 'loginWeb']);
 Route::post('/login/mobile', [LoginController::class, 'loginMobile']);
-Route::post('/mobile/register', [RegisterSiswaController::class, 'register']); // Update ini
 
 // =====================
 // MOBILE (PUBLIC)
@@ -44,6 +43,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // logout
     Route::post('/logout', [LoginController::class, 'logout']);
+
+    // =====================
+    // ADMIN & GURU
+    // =====================
+
+    Route::middleware('role:admin,guru')->group(function () {
+        Route::post('/admin/siswa', [SiswaController::class, 'store']);
+    });
 
     // =====================
     // ADMIN ONLY (CMS)
