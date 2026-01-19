@@ -1,65 +1,79 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Sidebar from "../components/Sidebar";
+import PageHeader from "../components/PageHeader";
 
 interface User {
-  id: number
-  name: string
-  email: string
+  id: number;
+  name: string;
+  email: string;
 }
 
 export default function Dashboard() {
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
 
     if (!token || !userData) {
-      router.push('/')
-      return
+      router.push("/");
+      return;
     }
 
-    setUser(JSON.parse(userData))
-  }, [])
+    setUser(JSON.parse(userData));
+  }, []);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token");
 
-    await fetch('http://localhost:8000/api/logout', {
-      method: 'POST',
+    await fetch("http://localhost:8000/api/logout", {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    localStorage.clear()
-    router.push('/')
-  }
+    localStorage.clear();
+    router.push("/");
+  };
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-center">
-      <div className="bg-white rounded-xl shadow-lg p-10 w-[400px] text-center">
-        <h1 className="text-2xl font-bold mb-2">
-          Selamat Datang
-        </h1>
+    <div className="flex min-h-screen bg-gray-100">
+      {/* SIDEBAR */}
+      <Sidebar
+        user={{
+          name: user.name,
+          email: user.email,
+        }}
+      />
 
-        <p className="text-lg mb-6">
-          👤 {user.name}
-        </p>
+      {/* CONTENT */}
+      <main className="flex-1 flex flex-col">
+        {/* PAGE HEADER */}
+        <PageHeader pageTitle="Dashboard" userName={user.name} />
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-semibold"
-        >
-          Logout ({localStorage.getItem('role')})
-        </button>
-      </div>
+        {/* PAGE CONTENT */}
+        <div className="p-8">
+          <div className="bg-white rounded-xl shadow p-6">
+            <h1 className="text-2xl font-bold mb-2">Selamat Datang</h1>
+
+            <p className="text-lg mb-6">👤 {user.name}</p>
+
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold"
+            >
+              Logout ({localStorage.getItem("role")})
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
-  )
+  );
 }

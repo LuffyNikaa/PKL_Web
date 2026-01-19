@@ -56,7 +56,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // ADMIN ONLY (CMS)
     // =====================
     Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/guru', [GuruController::class, 'index']);
         Route::post('/admin/guru', [GuruController::class, 'store']);
+        Route::put('/admin/guru/{id}', [GuruController::class, 'update']);   
+        Route::delete('/admin/guru/{id}', [GuruController::class, 'destroy']);
 
         Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::post('/admin/dudi', [DudiController::class, 'store']);
