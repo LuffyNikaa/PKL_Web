@@ -106,7 +106,12 @@ export default function Sidebar({ user }: { user: User }) {
                             href="/data-guru"
                             pathname={pathname}
                         />
-                        <MenuItem icon="/icons/dudi.svg" label="Data DuDi" />
+                        <MenuItem
+                            icon="/icons/dudi.png"
+                            label="Data Dudi"
+                            href="/data-dudi"
+                            pathname={pathname}
+                        />
                         <MenuItem icon="/icons/siswa.svg" label="Data Siswa" />
                     </div>
                 </div> 

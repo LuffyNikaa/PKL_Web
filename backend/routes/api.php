@@ -63,5 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::post('/admin/dudi', [DudiController::class, 'store']);
+        Route::put('/admin/dudi/{id}', [DudiController::class, 'update']);
+        Route::delete('/admin/dudi/{id}', [DudiController::class, 'destroy']);
     });
 });
