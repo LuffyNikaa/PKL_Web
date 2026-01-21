@@ -50,6 +50,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:admin,guru')->group(function () {
         Route::post('/admin/siswa', [SiswaController::class, 'store']);
+        Route::get('/admin/siswa', [SiswaController::class, 'index']);
+        Route::put('/admin/siswa/{id}', [SiswaController::class, 'update']);
+        Route::delete('/admin/siswa/{id}', [SiswaController::class, 'destroy']);
+
+        Route::get('/admin/dudi', [DudiController::class, 'index']);
     });
 
     // =====================
@@ -61,7 +66,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/guru/{id}', [GuruController::class, 'update']);   
         Route::delete('/admin/guru/{id}', [GuruController::class, 'destroy']);
 
-        Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::post('/admin/dudi', [DudiController::class, 'store']);
         Route::put('/admin/dudi/{id}', [DudiController::class, 'update']);
         Route::delete('/admin/dudi/{id}', [DudiController::class, 'destroy']);

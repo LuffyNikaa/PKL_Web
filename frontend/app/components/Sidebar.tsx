@@ -96,25 +96,40 @@ export default function Sidebar({ user }: { user: User }) {
 
                 {/* KELOLA DATA */}
                 <div>
-                    <p className="text-black text-xl font-bold mb-1 font-inter">
-                        Kelola Data
-                    </p>
-                    <div className="space-y-1">
-                        <MenuItem
-                            icon="/icons/logout.png"
-                            label="Data Guru"
-                            href="/data-guru"
-                            pathname={pathname}
-                        />
-                        <MenuItem
-                            icon="/icons/dudi.png"
-                            label="Data Dudi"
-                            href="/data-dudi"
-                            pathname={pathname}
-                        />
-                        <MenuItem icon="/icons/siswa.svg" label="Data Siswa" />
-                    </div>
-                </div> 
+                  <p className="text-black text-xl font-bold mb-1 font-inter">
+                      Kelola Data
+                  </p>
+
+                  <div className="space-y-1">
+                      {/* ADMIN ONLY */}
+                      {role === "admin" && (
+                          <>
+                              <MenuItem
+                                  icon="/icons/logout.png"
+                                  label="Data Guru"
+                                  href="/data-guru"
+                                  pathname={pathname}
+                              />
+                              <MenuItem
+                                  icon="/icons/dudi.png"
+                                  label="Data Dudi"
+                                  href="/data-dudi"
+                                  pathname={pathname}
+                              />
+                          </>
+                      )}
+
+                      {/* ADMIN & GURU */}
+                      {(role === "admin" || role === "guru") && (
+                          <MenuItem
+                              icon="/icons/logout.png"
+                              label="Data Siswa"
+                              href="/data-siswa"
+                              pathname={pathname}
+                          />
+                      )}
+                  </div>
+              </div> 
                 {/* MANAJEMEN SISWA */}
           <div>
             <p className="text-gray-400 uppercase text-xs mb-2">
