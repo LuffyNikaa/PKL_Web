@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import PageHeader from "../components/PageHeader";
-import { Modal, Button, Label, TextInput, Select, ModalHeader, ModalBody, ModalFooter } from "flowbite-react";
+import { Modal, Button, Label, TextInput, Textarea, Select, ModalHeader, ModalBody, ModalFooter, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, } from "flowbite-react";
 
 type Guru = {
   id_guru: number;
@@ -71,9 +71,16 @@ const [isEditMode, setIsEditMode] = useState(false)
     fetchGuru();
   }, []);
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleFormChange = (
+  e: React.ChangeEvent<any>
+) => {
+  const { name, value } = e.target;
+  setForm((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
+
 
   const handleSimpan = async () => {
     try {
@@ -213,42 +220,48 @@ const handleUpdateGuru = async () => {
             </button>
 
             {/* TABLE */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm font-inter">
-                <thead className="bg-gray-100 text-left">
-                  <tr>
-                    <th className="px-4 py-2">No</th>
-                    <th className="px-4 py-2">Nama</th>
-                    <th className="px-4 py-2">Mapel</th>
-                    <th className="px-4 py-2">Jenis Kelamin</th>
-                    <th className="px-4 py-2">Alamat</th>
-                    <th className="px-4 py-2 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
+              <Table hoverable className="text-sm font-inter">
+                <TableHead className="bg-gray-100">
+                  <TableRow>
+                    <TableHeadCell>No</TableHeadCell>
+                    <TableHeadCell>Nama</TableHeadCell>
+                    <TableHeadCell>Mapel</TableHeadCell>
+                    <TableHeadCell>Jenis Kelamin</TableHeadCell>
+                    <TableHeadCell>Alamat</TableHeadCell>
+                    <TableHeadCell className="text-center">Aksi</TableHeadCell>
+                  </TableRow>
+                </TableHead>
+
+                <TableBody className="divide-y">
                   {currentData.map((guru, index) => (
-                    <tr key={guru.id_guru} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-2">{start + index + 1}</td>
-                      <td className="px-4 py-2">{guru.nama_guru}</td>
-                      <td className="px-4 py-2">{guru.mapel_guru}</td>
-                      <td className="px-4 py-2">{guru.jk_guru}</td>
-                      <td className="px-4 py-2">{guru.alamat_guru}</td>
-                      <td className="px-4 py-2 text-center">
+                    <TableRow
+                      key={guru.id_guru}
+                      className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      <TableCell>{start + index + 1}</TableCell>
+                      <TableCell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
+                        {guru.nama_guru}
+                      </TableCell>
+                      <TableCell>{guru.mapel_guru}</TableCell>
+                      <TableCell>{guru.jk_guru}</TableCell>
+                      <TableCell>{guru.alamat_guru}</TableCell>
+                      <TableCell className="text-center">
                         <button
-                            onClick={() => {
+                          onClick={() => {
                             setSelectedGuru(guru);
                             setShowDetailModal(true);
                             setIsEditMode(false);
-                            }}
-                            className="text-blue-500 hover:underline"
+                          }}
+                          className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
                         >
-                            Detail
+                          Detail
                         </button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {/* PAGINATION */}
@@ -286,117 +299,119 @@ const handleUpdateGuru = async () => {
       </main>
 
       {/* ===== MODAL TAMBAH GURU ===== */}
-      <Modal show={showModal} size="lg" popup={true} onClose={() => setShowModal(false)}>
-        <ModalHeader>
-            Tambah Data Guru
-        </ModalHeader>
+      <Modal dismissible show={showModal} size="4xl" onClose={() => setShowModal(false)}>
+        <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Guru</ModalHeader>
 
-        <ModalBody>
-            <form className="flex flex-col gap-4">
-            <div>
-                <Label htmlFor="nama_guru">Nama Guru</Label>
-                <TextInput
-                id="nama_guru"
-                name="nama_guru"
-                value={form.nama_guru}
-                onChange={handleFormChange}
-                placeholder="Masukkan nama guru"
-                required
-                />
+        <ModalBody className="px-6 py-4">
+            <form className="grid grid-cols-2 gap-4">
+              <div className="space-y-5">
+                <div>
+                  <Label htmlFor="nama_guru">Nama Guru</Label>
+                  <TextInput
+                    id="nama_guru"
+                    name="nama_guru"
+                    value={form.nama_guru}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan nama guru"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="no_guru">Nomor HP</Label>
+                  <TextInput
+                    id="no_guru"
+                    name="no_guru"
+                    value={form.no_guru}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan nomor HP"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nip_guru">NIP</Label>
+                  <TextInput
+                    id="nip_guru"
+                    name="nip_guru"
+                    value={form.nip_guru}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan NIP"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email_users">Email Login</Label>
+                  <TextInput
+                    id="email_users"
+                    name="email_users"
+                    type="email"
+                    value={form.email_users}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan email login"
+                    required
+                    />
+                </div>
             </div>
 
-            <div>
-                <Label htmlFor="nip_guru">NIP</Label>
-                <TextInput
-                id="nip_guru"
-                name="nip_guru"
-                value={form.nip_guru}
-                onChange={handleFormChange}
-                placeholder="Masukkan NIP"
-                required
-                />
-            </div>
+            <div className="space-y-5">
+              <div>
+                  <Label htmlFor="mapel_guru">Mata Pelajaran</Label>
+                  <TextInput
+                    id="mapel_guru"
+                    name="mapel_guru"
+                    value={form.mapel_guru}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan mata pelajaran"
+                    required
+                  />
+              </div>
 
-            <div>
-                <Label htmlFor="mapel_guru">Mata Pelajaran</Label>
-                <TextInput
-                id="mapel_guru"
-                name="mapel_guru"
-                value={form.mapel_guru}
-                onChange={handleFormChange}
-                placeholder="Masukkan mata pelajaran"
-                required
-                />
-            </div>
+              <div>
+                  <Label htmlFor="jk_guru">Jenis Kelamin</Label>
+                  <Select
+                    id="jk_guru"
+                    name="jk_guru"
+                    value={form.jk_guru}
+                    onChange={handleFormChange}
+                    required
+                  >
+                    <option value="">Pilih jenis kelamin</option>
+                    <option value="laki-laki">Laki-laki</option>
+                    <option value="perempuan">Perempuan</option>
+                  </Select>
+              </div>
 
-            <div>
-                <Label htmlFor="jk_guru">Jenis Kelamin</Label>
-                <Select
-                id="jk_guru"
-                name="jk_guru"
-                value={form.jk_guru}
-                onChange={handleFormChange}
-                required
-                >
-                <option value="">Pilih jenis kelamin</option>
-                <option value="laki-laki">Laki-laki</option>
-                <option value="perempuan">Perempuan</option>
-                </Select>
-            </div>
+              <div>
+                  <Label htmlFor="alamat_guru">Alamat</Label>
+                  <Textarea
+                    id="alamat_guru"
+                    name="alamat_guru"
+                    value={form.alamat_guru}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan alamat"
+                    required
+                  />
+              </div>
 
-            <div>
-                <Label htmlFor="alamat_guru">Alamat</Label>
-                <TextInput
-                id="alamat_guru"
-                name="alamat_guru"
-                value={form.alamat_guru}
-                onChange={handleFormChange}
-                placeholder="Masukkan alamat"
-                required
-                />
-            </div>
-
-            <div>
-                <Label htmlFor="no_guru">Nomor HP</Label>
-                <TextInput
-                id="no_guru"
-                name="no_guru"
-                value={form.no_guru}
-                onChange={handleFormChange}
-                placeholder="Masukkan nomor HP"
-                required
-                />
-            </div>
-
-            <div>
-                <Label htmlFor="email_users">Email Login</Label>
-                <TextInput
-                id="email_users"
-                name="email_users"
-                type="email"
-                value={form.email_users}
-                onChange={handleFormChange}
-                placeholder="Masukkan email login"
-                required
-                />
-            </div>
-
-            <div>
+              <div>
                 <Label htmlFor="password">Password</Label>
                 <TextInput
-                id="password"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleFormChange}
-                placeholder="Masukkan password"
-                required
-                />
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={form.password}
+                    onChange={handleFormChange}
+                    placeholder="Masukkan password"
+                    required
+                  />
+              </div>
             </div>
-            </form>
+          </form>
         </ModalBody>
 
-        <ModalFooter className="flex justify-between">
+        <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
             <Button onClick={handleSimpan} color="blue">
                 Simpan
             </Button>
@@ -404,144 +419,135 @@ const handleUpdateGuru = async () => {
                 Batal
             </Button>
         </ModalFooter>
-        </Modal>
+      </Modal>
 
-        <Modal
-            show={showDetailModal}
-            size="lg"
-            popup={true}
-            onClose={() => setShowDetailModal(false)}
-            >
-            <div className="flex items-center justify-between p-4 rounded-t dark:border-gray-600">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {isEditMode || !selectedGuru ? "Edit Data Guru" : "Detail Data Guru"}
-            </h3>
-            <button
-                type="button"
-                onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-            >
-                <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                </svg>
-                <span className="sr-only">Close modal</span>
-            </button>
+      {/* ===== MODAL DETAIL / EDIT GURU ===== */}
+      <Modal
+        dismissible
+        show={showDetailModal}
+        size="4xl"
+        onClose={() => setShowDetailModal(false)}
+      >
+        <ModalHeader className="px-6 py-4 border-b border-gray-200">
+          {isEditMode ? "Edit Data Guru" : "Detail Data Guru"}
+        </ModalHeader>
+
+        <ModalBody className="px-6 py-4">
+          {selectedGuru && (
+          <form className="grid grid-cols-2 gap-4">
+            <div className="space-y-5">
+              <div>
+                <Label htmlFor="nama_guru">Nama Guru</Label>
+                <TextInput
+                  id="nama_guru"
+                  name="nama_guru"
+                  value={form.nama_guru || selectedGuru.nama_guru}
+                  onChange={handleFormChange}
+                  readOnly={!isEditMode}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="nip_guru">NIP</Label>
+                <TextInput
+                  id="nip_guru"
+                  name="nip_guru"
+                  value={form.nip_guru || selectedGuru.nip_guru}
+                  onChange={handleFormChange}
+                  readOnly={!isEditMode}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="no_guru">Nomor HP</Label>
+                <TextInput
+                  id="no_guru"
+                  name="no_guru"
+                  value={form.no_guru || selectedGuru.no_guru}
+                  onChange={handleFormChange}
+                  readOnly={!isEditMode}
+                />
+              </div>
             </div>
 
-            <ModalBody>
-                <form className="flex flex-col gap-4">
-                {selectedGuru && (
-                    <>
-                    <div>
-                        <Label htmlFor="nama_guru">Nama Guru</Label>
-                        <TextInput
-                        id="nama_guru"
-                        name="nama_guru"
-                        value={form.nama_guru || selectedGuru.nama_guru}
-                        onChange={handleFormChange}
-                        readOnly={!isEditMode}
-                        />
-                    </div>
+            <div className="space-y-5">
+              <div>
+                <Label htmlFor="mapel_guru">Mata Pelajaran</Label>
+                <TextInput
+                  id="mapel_guru"
+                  name="mapel_guru"
+                  value={form.mapel_guru || selectedGuru.mapel_guru}
+                  onChange={handleFormChange}
+                  readOnly={!isEditMode}
+                />
+              </div>
 
-                    <div>
-                        <Label htmlFor="nip_guru">NIP</Label>
-                        <TextInput
-                        id="nip_guru"
-                        name="nip_guru"
-                        value={form.nip_guru || selectedGuru.nip_guru}
-                        onChange={handleFormChange}
-                        readOnly={!isEditMode}
-                        />
-                    </div>
+              <div>
+                <Label htmlFor="jk_guru">Jenis Kelamin</Label>
+                <Select
+                  id="jk_guru"
+                  name="jk_guru"
+                  value={form.jk_guru || selectedGuru.jk_guru}
+                  onChange={handleFormChange}
+                  disabled={!isEditMode}
+                >
+                  <option value="laki-laki">Laki-laki</option>
+                  <option value="perempuan">Perempuan</option>
+                </Select>
+              </div>
 
-                    <div>
-                        <Label htmlFor="mapel_guru">Mata Pelajaran</Label>
-                        <TextInput
-                        id="mapel_guru"
-                        name="mapel_guru"
-                        value={form.mapel_guru || selectedGuru.mapel_guru}
-                        onChange={handleFormChange}
-                        readOnly={!isEditMode}
-                        />
-                    </div>
+              <div>
+                <Label htmlFor="alamat_guru">Alamat</Label>
+                <TextInput
+                  id="alamat_guru"
+                  name="alamat_guru"
+                  value={form.alamat_guru || selectedGuru.alamat_guru}
+                  onChange={handleFormChange}
+                  readOnly={!isEditMode}
+                />
+              </div>
+            </div>
+          </form>
+          )}
+        </ModalBody>
 
-                    <div>
-                        <Label htmlFor="jk_guru">Jenis Kelamin</Label>
-                        <Select
-                        id="jk_guru"
-                        name="jk_guru"
-                        value={form.jk_guru || selectedGuru.jk_guru}
-                        onChange={handleFormChange}
-                        disabled={!isEditMode}
-                        >
-                        <option value="laki-laki">Laki-laki</option>
-                        <option value="perempuan">Perempuan</option>
-                        </Select>
-                    </div>
-
-                    <div>
-                        <Label htmlFor="alamat_guru">Alamat</Label>
-                        <TextInput
-                        id="alamat_guru"
-                        name="alamat_guru"
-                        value={form.alamat_guru || selectedGuru.alamat_guru}
-                        onChange={handleFormChange}
-                        readOnly={!isEditMode}
-                        />
-                    </div>
-
-                    <div>
-                        <Label htmlFor="no_guru">Nomor HP</Label>
-                        <TextInput
-                        id="no_guru"
-                        name="no_guru"
-                        value={form.no_guru || selectedGuru.no_guru}
-                        onChange={handleFormChange}
-                        readOnly={!isEditMode}
-                        />
-                    </div>
-                    </>
-                )}
-                </form>
-            </ModalBody>
-
-            <ModalFooter className="flex justify-between">
-                {!isEditMode ? (
-                <>
-                    <Button color="blue" onClick={handleEditGuru}>
-                    Edit
-                    </Button>
-                    <Button color="red" onClick={handleDeleteGuru}>
-                    Hapus
-                    </Button>
-                </>
-                ) : (
-                <>
-                    <Button color="blue" onClick={handleUpdateGuru}>
-                    Simpan
-                    </Button>
-                    <Button
-                    color="red"
-                    onClick={() => {
-                        setIsEditMode(false);
-                        setForm({
-                        nama_guru: "",
-                        nip_guru: "",
-                        mapel_guru: "",
-                        jk_guru: "",
-                        alamat_guru: "",
-                        no_guru: "",
-                        email_users: "",
-                        password: "",
-                        });
-                    }}
-                    >
-                    Batal
-                    </Button>
-                </>
-                )}
-            </ModalFooter>
-        </Modal>
+        <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
+          {!isEditMode ? (
+            <>
+              <Button color="blue" onClick={handleEditGuru}>
+                Edit
+              </Button>
+              <Button color="red" onClick={handleDeleteGuru}>
+                Hapus
+              </Button>
+            </>
+            ) : (
+            <>
+              <Button color="blue" onClick={handleUpdateGuru}>
+                Simpan
+              </Button>
+              <Button
+                color="red"
+                onClick={() => {
+                  setIsEditMode(false);
+                  setForm({
+                    nama_guru: "",
+                    nip_guru: "",
+                    mapel_guru: "",
+                    jk_guru: "",
+                    alamat_guru: "",
+                    no_guru: "",
+                    email_users: "",
+                    password: "",
+                  });
+                }}
+              >
+                Batal
+              </Button>
+            </>
+            )}
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
