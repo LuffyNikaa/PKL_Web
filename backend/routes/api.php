@@ -70,4 +70,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/dudi/{id}', [DudiController::class, 'update']);
         Route::delete('/admin/dudi/{id}', [DudiController::class, 'destroy']);
     });
+
+    // =====================
+    // MOBILE - SISWA
+    // =====================
+    Route::get(
+        '/mobile/siswa/profile',[SiswaController::class, 'profile']
+    );
 });

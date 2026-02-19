@@ -3,16 +3,8 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import PageHeader from "../components/PageHeader";
-import {
-  Modal,
-  Button,
-  Label,
-  TextInput,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Select,
-} from "flowbite-react";
+import { Modal, Button, Label, TextInput, ModalHeader, ModalBody, ModalFooter, Select, Table, TableHead, TableRow, TableHeadCell, TableBody, TableCell, Textarea} from "flowbite-react";
+import dynamic from "next/dynamic";
 
 type Dudi = {
   id_dudi: number;
@@ -48,6 +40,28 @@ export default function DataDudiPage() {
     longitude_dudi: "",
   });
 
+  const resetFormDudi = () => {
+    setForm({
+      nama_dudi: "",
+      alamat_dudi: "",
+      kontak_dudi: "",
+      latitude_dudi: "",
+      longitude_dudi: "",
+    });
+  };
+
+  const handleAddDudi = () => {
+    resetFormDudi();
+    setIsEditMode(false);
+    setSelectedDudi(null);
+    setShowDetailModal(true);
+  };
+
+  const MapComponent = dynamic(
+  () => import("../components/MapComponents"),
+  { ssr: false }
+);
+
   // =====================
   // AUTH USER
   // =====================
@@ -82,12 +96,34 @@ export default function DataDudiPage() {
     fetchDudi();
   }, []);
 
+  useEffect(() => {
+    if (!showDetailModal) {
+      resetFormDudi();
+    }
+  }, [showDetailModal]);
+
   // =====================
   // FORM HANDLER
   // =====================
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleFormChange = (e: React.ChangeEvent<any>) => {
+  const { name, value } = e.target;
+    setForm((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
   };
+
+  // =====================
+  // Handle Location
+  // =====================
+  const handleLocationSelect = (lat: number, lng: number) => {
+  setForm((prev) => ({
+    ...prev,
+    latitude_dudi: lat.toString(),
+    longitude_dudi: lng.toString(),
+  }));
+};
+
 
   // =====================
   // CREATE
@@ -142,33 +178,43 @@ export default function DataDudiPage() {
   // UPDATE
   // =====================
   const handleUpdateDudi = async () => {
-    if (!selectedDudi) return;
+  if (!selectedDudi) return;
 
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8000/api/admin/dudi/${selectedDudi.id_dudi}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(form),
-        }
-      );
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message);
-
-      fetchDudi();
-      setShowDetailModal(false);
-      setSelectedDudi(null);
-      setIsEditMode(false);
-    } catch (err: any) {
-      alert(err.message || err);
-    }
+  const payload = {
+    ...form,
+    latitude_dudi: form.latitude_dudi
+      ? parseFloat(form.latitude_dudi)
+      : null,
+    longitude_dudi: form.longitude_dudi
+      ? parseFloat(form.longitude_dudi)
+      : null,
   };
+
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      `http://localhost:8000/api/admin/dudi/${selectedDudi.id_dudi}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message);
+
+    fetchDudi();
+    setShowDetailModal(false);
+    setSelectedDudi(null);
+    setIsEditMode(false);
+  } catch (err: any) {
+    alert(err.message || err);
+  }
+};
 
   // =====================
   // DELETE
@@ -234,40 +280,46 @@ export default function DataDudiPage() {
                 </button>
     
                 {/* TABLE */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm font-inter">
-                    <thead className="bg-gray-100 text-left">
-                      <tr>
-                        <th className="px-4 py-2">No</th>
-                        <th className="px-4 py-2">Nama</th>
-                        <th className="px-4 py-2">Alamat</th>
-                        <th className="px-4 py-2">Kontak</th>
-                        <th className="px-4 py-2 text-center">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
+                  <Table hoverable className="text-sm font-inter">
+                    <TableHead className="bg-gray-100">
+                      <TableRow>
+                        <TableHeadCell>No</TableHeadCell>
+                        <TableHeadCell>Nama</TableHeadCell>
+                        <TableHeadCell>Alamat</TableHeadCell>
+                        <TableHeadCell>Kontak</TableHeadCell>
+                        <TableHeadCell className="text-center">Aksi</TableHeadCell>
+                      </TableRow>
+                    </TableHead>
+
+                    <TableBody className="divide-y">
                       {currentData.map((dudi, index) => (
-                        <tr key={dudi.id_dudi} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2">{start + index + 1}</td>
-                          <td className="px-4 py-2">{dudi.nama_dudi}</td>
-                          <td className="px-4 py-2">{dudi.alamat_dudi}</td>
-                          <td className="px-4 py-2">{dudi.kontak_dudi}</td>
-                          <td className="px-4 py-2 text-center">
+                        <TableRow
+                          key={dudi.id_dudi}
+                          className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                        >
+                          <TableCell>{start + index + 1}</TableCell>
+                          <TableCell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
+                            {dudi.nama_dudi}
+                          </TableCell>
+                          <TableCell>{dudi.alamat_dudi}</TableCell>
+                          <TableCell>{dudi.kontak_dudi}</TableCell>
+                          <TableCell className="text-center">
                             <button
-                                onClick={() => {
+                              onClick={() => {
                                 setSelectedDudi(dudi);
                                 setShowDetailModal(true);
                                 setIsEditMode(false);
-                                }}
-                                className="text-blue-500 hover:underline"
+                              }}
+                              className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
                             >
-                                Detail
+                              Detail
                             </button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
     
                 {/* PAGINATION */}
@@ -305,208 +357,239 @@ export default function DataDudiPage() {
           </main>
     
           {/* ===== MODAL TAMBAH Dudi ===== */}
-          <Modal show={showModal} size="lg" popup={true} onClose={() => setShowModal(false)}>
-            <ModalHeader>
-                Tambah Data Dudi
-            </ModalHeader>
+          <Modal dismissible show={showModal} size="4xl" onClose={() => setShowModal(false)}>
+            <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Dudi</ModalHeader>
+              <ModalBody className="px-6 py-4">
+                <form className="grid grid-cols-2 gap-4">
+                  <div  className="space-y-5">
+                    <div>
+                      <Label htmlFor="nama_dudi">Nama Dudi</Label>
+                      <TextInput
+                        id="nama_dudi"
+                        name="nama_dudi"
+                        value={form.nama_dudi}
+                        onChange={handleFormChange}
+                        placeholder="Masukkan nama dudi"
+                        required
+                      />
+                    </div>
     
-            <ModalBody>
-                <form className="flex flex-col gap-4">
-                <div>
-                    <Label htmlFor="nama_dudi">Nama Dudi</Label>
-                    <TextInput
-                    id="nama_dudi"
-                    name="nama_dudi"
-                    value={form.nama_dudi}
-                    onChange={handleFormChange}
-                    placeholder="Masukkan nama dudi"
-                    required
-                    />
-                </div>
-    
-                <div>
-                    <Label htmlFor="alamat_dudi">Alamat</Label>
-                    <TextInput
-                    id="alamat_dudi"
-                    name="alamat_dudi"
-                    value={form.alamat_dudi}
-                    onChange={handleFormChange}
-                    placeholder="Masukkan alamat"
-                    required
-                    />
-                </div>
+                    <div>
+                      <Label htmlFor="alamat_dudi">Alamat</Label>
+                      <Textarea
+                        id="alamat_dudi"
+                        name="alamat_dudi"
+                        value={form.alamat_dudi}
+                        onChange={handleFormChange}
+                        placeholder="Masukkan alamat"
+                        required
+                      />
+                    </div>
 
-                <div>
-                    <Label htmlFor="kontak_dudi">Kontak</Label>
-                    <TextInput
-                    id="kontak_dudi"
-                    name="kontak_dudi"
-                    value={form.kontak_dudi}
-                    onChange={handleFormChange}
-                    placeholder="Masukkan kontak"
-                    required
-                    />
-                </div>
+                    <div>
+                      <Label htmlFor="kontak_dudi">Kontak</Label>
+                      <TextInput
+                        id="kontak_dudi"
+                        name="kontak_dudi"
+                        value={form.kontak_dudi}
+                        onChange={handleFormChange}
+                        placeholder="Masukkan kontak"
+                        required
+                      />
+                    </div>
 
-                <div>
-                    <Label htmlFor="latitude_dudi">Latitude DUDI</Label>
-                    <TextInput
+                    <div>
+                      <Label htmlFor="latitude_dudi">Latitude DUDI</Label>
+                      <TextInput
                         id="latitude_dudi"
                         name="latitude_dudi"
                         type="number"
                         step="any"
-                        inputMode="decimal"
                         value={form.latitude_dudi}
-                        onChange={handleFormChange}
-                        placeholder="Masukkan latitude dudi"
+                        readOnly
                         required
-                    />
+                      />
                     </div>
 
                     <div>
-                    <Label htmlFor="longitude_dudi">Longitude DUDI</Label>
-                    <TextInput
+                      <Label htmlFor="longitude_dudi">Longitude DUDI</Label>
+                      <TextInput
                         id="longitude_dudi"
                         name="longitude_dudi"
                         type="number"
                         step="any"
-                        inputMode="decimal"
                         value={form.longitude_dudi}
-                        onChange={handleFormChange}
-                        placeholder="Masukkan longitude dudi"
+                        readOnly
                         required
-                    />
-                </div>
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="h-[420px] rounded-lg overflow-hidden">
+                      <MapComponent
+                        onLocationSelect={handleLocationSelect}
+                        latLng={[
+                          form.latitude_dudi
+                            ? Number(form.latitude_dudi)
+                            : -7.250445,      // default Indonesia
+                          form.longitude_dudi
+                            ? Number(form.longitude_dudi)
+                            : 112.768845
+                        ]}
+                        isEditing={false}
+                        isAddMode={true}
+                      />
+                    </div>
+                  </div>
                 </form>
-            </ModalBody>
+                
+              </ModalBody>
     
-            <ModalFooter className="flex justify-between">
+              <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
                 <Button onClick={handleSimpan} color="blue">
-                    Simpan
+                  Simpan
                 </Button>
                 <Button onClick={() => setShowModal(false)} color="red">
-                    Batal
+                  Batal
                 </Button>
-            </ModalFooter>
+              </ModalFooter>
             </Modal>
     
+            {/* ===== MODAL DETAIL Dudi ===== */}
             <Modal
-                show={showDetailModal}
-                size="lg"
-                popup={true}
-                onClose={() => setShowDetailModal(false)}
-                >
-                <div className="flex items-center justify-between p-4 rounded-t dark:border-gray-600">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {isEditMode || !selectedDudi ? "Edit Data Dudi" : "Detail Data Dudi"}
-                </h3>
-                <button
-                    type="button"
-                    onClick={() => setShowDetailModal(false)}
-                    className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                    </svg>
-                    <span className="sr-only">Close modal</span>
-                </button>
-                </div>
-    
-                <ModalBody>
-                    <form className="flex flex-col gap-4">
-                    {selectedDudi && (
-                        <>
+              dismissible
+              show={showDetailModal}
+              size="4xl"
+              onClose={() => {
+                setShowDetailModal(false);
+                setIsEditMode(false);
+                setSelectedDudi(null);
+                resetFormDudi();
+              }}
+            >
+              <ModalHeader className="px-6 py-4 border-b border-gray-200">
+                {isEditMode ? "Edit Data DUDI" : "Detail Data DUDI"}
+              </ModalHeader>
+                <ModalBody className="px-6 py-4">
+                  {selectedDudi && (
+                    <form className="grid grid-cols-2 gap-6">
+
+                      {/* ===== KIRI: FORM ===== */}
+                      <div className="space-y-5">
                         <div>
-                            <Label htmlFor="nama_dudi">Nama Dudi</Label>
-                            <TextInput
+                          <Label htmlFor="nama_dudi">Nama DUDI</Label>
+                          <TextInput
                             id="nama_dudi"
                             name="nama_dudi"
                             value={form.nama_dudi || selectedDudi.nama_dudi}
                             onChange={handleFormChange}
                             readOnly={!isEditMode}
-                            />
+                          />
                         </div>
-    
+
                         <div>
-                            <Label htmlFor="alamat_dudi">Alamat</Label>
-                            <TextInput
+                          <Label htmlFor="alamat_dudi">Alamat</Label>
+                          <TextInput
                             id="alamat_dudi"
                             name="alamat_dudi"
                             value={form.alamat_dudi || selectedDudi.alamat_dudi}
                             onChange={handleFormChange}
                             readOnly={!isEditMode}
-                            />
+                          />
                         </div>
 
                         <div>
-                            <Label htmlFor="kontak">Kontak</Label>
-                            <TextInput
-                            id="kontak"
-                            name="kontak"
+                          <Label htmlFor="kontak_dudi">Kontak</Label>
+                          <TextInput
+                            id="kontak_dudi"
+                            name="kontak_dudi"
                             value={form.kontak_dudi || selectedDudi.kontak_dudi}
                             onChange={handleFormChange}
                             readOnly={!isEditMode}
-                            />
+                          />
                         </div>
 
                         <div>
-                            <Label htmlFor="latitude">Latitude</Label>
-                            <TextInput
-                            id="latitude"
-                            name="latitude"
+                          <Label htmlFor="latitude_dudi">Latitude</Label>
+                          <TextInput
+                            id="latitude_dudi"
+                            name="latitude_dudi"
                             value={form.latitude_dudi || selectedDudi.latitude_dudi}
-                            onChange={handleFormChange}
-                            readOnly={!isEditMode}
-                            />
+                            readOnly
+                          />
                         </div>
 
                         <div>
-                            <Label htmlFor="longitude">longitude</Label>
-                            <TextInput
-                            id="longitude"
-                            name="longitude"
+                          <Label htmlFor="longitude_dudi">Longitude</Label>
+                          <TextInput
+                            id="longitude_dudi"
+                            name="longitude_dudi"
                             value={form.longitude_dudi || selectedDudi.longitude_dudi}
-                            onChange={handleFormChange}
-                            readOnly={!isEditMode}
-                            />
+                            readOnly
+                          />
                         </div>
-                        </>
-                    )}
+
+                        {isEditMode && (
+                          <p className="text-xs text-gray-500">
+                            * Geser atau klik peta untuk memperbarui lokasi DUDI
+                          </p>
+                        )}
+                      </div>
+
+                      {/* ===== KANAN: MAP ===== */}
+                      <div className="h-[420px] rounded-lg overflow-hidden">
+                        <MapComponent
+                          onLocationSelect={handleLocationSelect}
+                          latLng={[
+                            form.latitude_dudi
+                              ? Number(form.latitude_dudi)
+                              : Number(selectedDudi.latitude_dudi) || -7.250445,
+                            form.longitude_dudi
+                              ? Number(form.longitude_dudi)
+                              : Number(selectedDudi.longitude_dudi) || 112.768845
+                          ]}
+                          isEditing={isEditMode}
+                          isAddMode={false}
+                        />
+                      </div>
+
                     </form>
+                  )}
                 </ModalBody>
     
-                <ModalFooter className="flex justify-between">
-                    {!isEditMode ? (
+                <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
+                  {!isEditMode ? (
                     <>
-                        <Button color="blue" onClick={handleEditDudi}>
+                      <Button color="blue" onClick={handleEditDudi}>
                         Edit
-                        </Button>
-                        <Button color="red" onClick={handleDeleteDudi}>
+                      </Button>
+                      <Button color="red" onClick={handleDeleteDudi}>
                         Hapus
-                        </Button>
+                      </Button>
                     </>
-                    ) : (
+                  ) : (
                     <>
-                        <Button color="blue" onClick={handleUpdateDudi}>
+                      <Button color="blue" onClick={handleUpdateDudi}>
                         Simpan
-                        </Button>
-                        <Button
+                      </Button>
+                      <Button
                         color="red"
                         onClick={() => {
-                            setIsEditMode(false);
-                            setForm({
+                          setIsEditMode(false);
+                          setForm({
                             nama_dudi: "",
                             alamat_dudi: "",
                             kontak_dudi: "",
                             latitude_dudi: "",
                             longitude_dudi: "",
-                            });
+                          });
                         }}
-                        >
+                      >
                         Batal
-                        </Button>
+                      </Button>
                     </>
-                    )}
+                  )}
                 </ModalFooter>
             </Modal>
         </div>

@@ -71,9 +71,7 @@ const [isEditMode, setIsEditMode] = useState(false)
     fetchGuru();
   }, []);
 
-  const handleFormChange = (
-  e: React.ChangeEvent<any>
-) => {
+  const handleFormChange = (e: React.ChangeEvent<any>) => {
   const { name, value } = e.target;
   setForm((prev) => ({
     ...prev,
@@ -412,12 +410,12 @@ const handleUpdateGuru = async () => {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-            <Button onClick={handleSimpan} color="blue">
-                Simpan
-            </Button>
-            <Button onClick={() => setShowModal(false)} color="red">
-                Batal
-            </Button>
+          <Button onClick={handleSimpan} color="blue">
+            Simpan
+          </Button>
+          <Button onClick={() => setShowModal(false)} color="red">
+            Batal
+          </Button>
         </ModalFooter>
       </Modal>
 

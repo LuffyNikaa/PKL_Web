@@ -186,4 +186,38 @@ class SiswaController extends Controller
             ], 500);
         }
     }
+
+    // =====================
+    // GET /api/mobile/siswa/profile
+    // =====================
+    public function profile(Request $request)
+    {
+        // user yang sedang login (sanctum)
+        $user = $request->user();
+
+        // ambil siswa berdasarkan user login
+        $siswa = Siswa::where('id_user', $user->id_users)->first();
+
+        // ambil siswa + relasi dudi
+        $siswa = Siswa::with('dudi')->where('id_user', $user->id_users)->first();
+
+        if (!$siswa) {
+            return response()->json([
+                'message' => 'Data siswa tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'nama'    => $siswa->nama_siswa,
+                'email'   => $siswa->user?->email_users,
+                'jurusan' => $siswa->jurusan_siswa,
+                'kelas'   => $siswa->kelas_siswa,
+                'nis'     => $siswa->nis_siswa,
+                'alamat'  => $siswa->alamat_siswa,
+                'no_hp'   => $siswa->no_siswa,
+                'dudi'    => $siswa->dudi ? $siswa->dudi->nama_dudi : null,
+            ]
+        ], 200);
+    }
 }
