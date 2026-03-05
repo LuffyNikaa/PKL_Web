@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\GuruController;
 use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DudiController;
+use App\Http\Controllers\API\Mobile\PresensiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,7 +75,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // =====================
     // MOBILE - SISWA
     // =====================
-    Route::get(
-        '/mobile/siswa/profile',[SiswaController::class, 'profile']
-    );
+    Route::prefix('mobile')->group(function () {
+        Route::get('/siswa/profile', [SiswaController::class, 'profile']);
+        Route::get('/absensi/status', [PresensiController::class, 'status']);   // cek status hari ini
+        Route::post('/absensi', [PresensiController::class, 'store']);          // absen masuk
+        Route::post('/absensi/pulang', [PresensiController::class, 'pulang']);  // absen pulang
+    });
 });

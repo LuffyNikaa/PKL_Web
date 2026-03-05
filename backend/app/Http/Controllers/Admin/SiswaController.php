@@ -209,14 +209,16 @@ class SiswaController extends Controller
 
         return response()->json([
             'data' => [
-                'nama'    => $siswa->nama_siswa,
-                'email'   => $siswa->user?->email_users,
-                'jurusan' => $siswa->jurusan_siswa,
-                'kelas'   => $siswa->kelas_siswa,
-                'nis'     => $siswa->nis_siswa,
-                'alamat'  => $siswa->alamat_siswa,
-                'no_hp'   => $siswa->no_siswa,
-                'dudi'    => $siswa->dudi ? $siswa->dudi->nama_dudi : null,
+                'nama'     => $siswa->nama_siswa,
+                'email'    => $siswa->user?->email_users,
+                'jurusan'  => $siswa->jurusan_siswa,
+                'kelas'    => $siswa->kelas_siswa,
+                'nis'      => $siswa->nis_siswa,
+                'alamat'   => $siswa->alamat_siswa,
+                'no_hp'    => $siswa->no_siswa,
+                'dudi'     => $siswa->dudi ? $siswa->dudi->nama_dudi : null,
+                'dudi_lat' => $siswa->dudi ? (float) $siswa->dudi->latitude_dudi : null,
+                'dudi_lon' => $siswa->dudi ? (float) $siswa->dudi->longitude_dudi : null,
             ]
         ], 200);
     }
