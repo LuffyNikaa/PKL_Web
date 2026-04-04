@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DudiController;
 use App\Http\Controllers\API\Mobile\PresensiController;
+use App\Http\Controllers\Admin\PresensiWebController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/siswa', [SiswaController::class, 'index']);
         Route::put('/admin/siswa/{id}', [SiswaController::class, 'update']);
         Route::delete('/admin/siswa/{id}', [SiswaController::class, 'destroy']);
+        Route::get('/admin/presensi', [PresensiWebController::class, 'index']);
 
         Route::get('/admin/dudi', [DudiController::class, 'index']);
     });

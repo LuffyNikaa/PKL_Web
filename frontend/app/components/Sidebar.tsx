@@ -48,7 +48,7 @@ export default function Sidebar({ user }: { user: User }) {
     };
 
   return (
-    <aside className="w-64 h-screen bg-white flex flex-col justify-between">
+    <aside className="w-64 h-screen bg-white flex flex-col justify-between sticky top-0 overflow-hidden">
         {/* TOP */}
         <div>
             {/* PROFILE */}
@@ -132,7 +132,7 @@ export default function Sidebar({ user }: { user: User }) {
               </div> 
                 {/* MANAJEMEN SISWA */}
           <div>
-            <p className="text-gray-400 uppercase text-xs mb-2">
+            <p className="text-black text-xl font-bold mb-1 font-inter">
               Manajemen Siswa
             </p>
 
@@ -141,14 +141,14 @@ export default function Sidebar({ user }: { user: User }) {
               className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-gray-100"
             >
               <span className="flex items-center gap-3">
-                <SidebarIcon src="/icons/administrasi.svg" />
+                <SidebarIcon src="/icons/administrasi.png" />
                 Administrasi
               </span>
               <SidebarIcon
                 src={
                   openAdmin
-                    ? "/icons/chevron-up.svg"
-                    : "/icons/chevron-down.svg"
+                    ? "/icons/panah-atas.png"
+                    : "/icons/panah-bawah.png"
                 }
                 size={14}
               />
@@ -156,10 +156,23 @@ export default function Sidebar({ user }: { user: User }) {
 
             {openAdmin && (
               <div className="ml-9 mt-1 space-y-1">
-                <SubMenuItem icon="/icons/jadwal.svg" label="Jadwal" />
                 <SubMenuItem
-                  icon="/icons/sertifikat.svg"
-                  label="Cetak Sertifikat"
+                  icon="/icons/presensi.png"
+                  label="Presensi"
+                  href="/administrasi/presensi"
+                  pathname={pathname}
+                />
+                <SubMenuItem
+                  icon="/icons/jurnal.svg"
+                  label="Jurnal Harian"
+                  href="/administrasi/jurnal-harian"
+                  pathname={pathname}
+                />
+                <SubMenuItem
+                  icon="/icons/jurnal.svg"
+                  label="Jurnal Mingguan"
+                  href="/administrasi/jurnal-mingguan"
+                  pathname={pathname}
                 />
               </div>
             )}
@@ -232,10 +245,26 @@ function MenuItem({
   );
 }
 
-function SubMenuItem({ icon, label }: { icon: string; label: string }) {
+function SubMenuItem({ icon, label, href, pathname }: { icon: string; label: string; href?: string; pathname?: string }) {
+  const isActive = href && pathname === href;
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition
+          ${isActive ? "bg-[#DBEAFE] text-blue-700 font-semibold" : "text-gray-600 hover:bg-gray-100"}
+        `}
+      >
+        <SidebarIcon src={icon} size={25} />
+        {label}
+      </Link>
+    );
+  }
+
   return (
-    <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-600">
-      <SidebarIcon src={icon} size={16} />
+    <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-600 text-sm">
+      <SidebarIcon src={icon} size={25} />
       {label}
     </button>
   );

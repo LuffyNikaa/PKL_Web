@@ -11,6 +11,8 @@
   "dependencies": {
     "flowbite": "^4.0.1",
     "flowbite-react": "^0.12.16",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
     "next": "16.1.0",
     "react": "^19.0.0-rc.1",
