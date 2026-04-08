@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Presensi;
+use App\Models\JurnalHarian; // ✅ tambahan
 
 class PresensiController extends Controller
 {
@@ -125,6 +126,19 @@ class PresensiController extends Controller
 
             if (!$absensi)              return response()->json(['message' => 'Belum absen masuk hari ini'], 400);
             if ($absensi->waktu_pulang) return response()->json(['message' => 'Sudah absen pulang hari ini'], 400);
+
+            // ✅ Cek jurnal — hanya untuk status hadir, izin/sakit tidak wajib
+            if ($absensi->status_absensi === 'hadir') {
+                $jurnal = JurnalHarian::where('id_siswa', $siswa->id_siswa)
+                    ->whereDate('tanggal_jurnal_harian', today())
+                    ->first();
+
+                if (!$jurnal) {
+                    return response()->json([
+                        'message' => 'Isi jurnal harian hari ini terlebih dahulu sebelum absen pulang',
+                    ], 422);
+                }
+            }
 
             $absensi->update(['waktu_pulang' => now()->format('H:i:s')]);
             return response()->json(['message' => 'Absensi pulang berhasil']);

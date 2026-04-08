@@ -8,6 +8,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DudiController;
 use App\Http\Controllers\API\Mobile\PresensiController;
 use App\Http\Controllers\Admin\PresensiWebController;
+use App\Http\Controllers\API\Mobile\JurnalHarianController;
+use App\Http\Controllers\Admin\JurnalHarianWebController;
+use App\Http\Controllers\API\Web\ProfileWebController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,9 +45,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
     // logout
     Route::post('/logout', [LoginController::class, 'logout']);
+    // profile
+    Route::get('/profile', [ProfileWebController::class, 'show']);
+    Route::get('/profile', [ProfileWebController::class, 'show']);
+    Route::put('/profile', [ProfileWebController::class, 'update']);
 
     // =====================
     // ADMIN & GURU
@@ -56,8 +62,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/siswa/{id}', [SiswaController::class, 'update']);
         Route::delete('/admin/siswa/{id}', [SiswaController::class, 'destroy']);
         Route::get('/admin/presensi', [PresensiWebController::class, 'index']);
-
         Route::get('/admin/dudi', [DudiController::class, 'index']);
+        Route::get('/admin/jurnal-harian', [JurnalHarianWebController::class, 'index']);
     });
 
     // =====================
@@ -82,5 +88,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/absensi/status', [PresensiController::class, 'status']);   // cek status hari ini
         Route::post('/absensi', [PresensiController::class, 'store']);          // absen masuk
         Route::post('/absensi/pulang', [PresensiController::class, 'pulang']);  // absen pulang
+
+        Route::get('/jurnal-harian',        [JurnalHarianController::class, 'index']);
+        Route::post('/jurnal-harian',       [JurnalHarianController::class, 'store']);
+        Route::put('/jurnal-harian/{id}',   [JurnalHarianController::class, 'update']);
     });
 });
