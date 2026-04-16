@@ -12,7 +12,7 @@ type User = {
 };
 
 function getDiceBearAvatar(seed: string) {
-    return `https://api.dicebear.com/9.x/avataaars/svg?backgroundColor=b6e3f4&seed=${encodeURIComponent(seed)}`;
+    return `https://api.dicebear.com/9.x/rings/svg?backgroundColor=d1d4f9&seed=${encodeURIComponent(seed)}`;
 }
 
 export default function Sidebar({ user }: { user: User }) {

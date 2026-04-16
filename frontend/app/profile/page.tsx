@@ -20,7 +20,7 @@ type ProfileData = {
 type User = { name: string; email: string };
 
 function getDiceBearAvatar(seed: string) {
-  return `https://api.dicebear.com/9.x/avataaars/svg?backgroundColor=b6e3f4&seed=${encodeURIComponent(seed)}`;
+  return `https://api.dicebear.com/9.x/rings/svg?backgroundColor=d1d4f9&seed=${encodeURIComponent(seed)}`;
 }
 
 function roleLabel(role: string) {

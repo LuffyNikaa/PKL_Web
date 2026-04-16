@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\PresensiWebController;
 use App\Http\Controllers\API\Mobile\JurnalHarianController;
 use App\Http\Controllers\Admin\JurnalHarianWebController;
 use App\Http\Controllers\API\Web\ProfileWebController;
+use App\Http\Controllers\API\Mobile\JurnalMingguanController;
+use App\Http\Controllers\Admin\JurnalMingguanWebController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/presensi', [PresensiWebController::class, 'index']);
         Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::get('/admin/jurnal-harian', [JurnalHarianWebController::class, 'index']);
+        Route::get('/admin/jurnal-mingguan', [JurnalMingguanWebController::class, 'index']);
     });
 
     // =====================
@@ -92,5 +95,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/jurnal-harian',        [JurnalHarianController::class, 'index']);
         Route::post('/jurnal-harian',       [JurnalHarianController::class, 'store']);
         Route::put('/jurnal-harian/{id}',   [JurnalHarianController::class, 'update']);
+
+        Route::get('/jurnal-mingguan',        [JurnalMingguanController::class, 'index']);
+        Route::post('/jurnal-mingguan',       [JurnalMingguanController::class, 'store']);
+        Route::put('/jurnal-mingguan/{id}',   [JurnalMingguanController::class, 'update']);
     });
 });

@@ -104,6 +104,20 @@ class PresensiController extends Controller
                 'foto_surat'        => $fotoPath,
             ]);
 
+            // ✅ Auto buat jurnal untuk izin/sakit
+            if (in_array($request->status_absensi, ['izin', 'sakit'])) {
+                $keterangan = $request->status_absensi === 'izin' ? 'Izin' : 'Sakit';
+                $alasan     = $request->alasan_absensi ? " - {$request->alasan_absensi}" : '';
+
+                JurnalHarian::create([
+                    'id_siswa'               => $siswa->id_siswa,
+                    'id_user'                => $user->id_users,
+                    'id_dudi'                => $siswa->id_dudi,
+                    'tanggal_jurnal_harian'  => today()->toDateString(),
+                    'kegiatan_jurnal_harian' => $keterangan . $alasan,
+                ]);
+            }
+
             return response()->json(['message' => 'Absensi berhasil']);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
