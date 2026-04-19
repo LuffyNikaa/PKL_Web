@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\JurnalHarianWebController;
 use App\Http\Controllers\API\Web\ProfileWebController;
 use App\Http\Controllers\API\Mobile\JurnalMingguanController;
 use App\Http\Controllers\Admin\JurnalMingguanWebController;
+use App\Http\Controllers\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::get('/admin/jurnal-harian', [JurnalHarianWebController::class, 'index']);
         Route::get('/admin/jurnal-mingguan', [JurnalMingguanWebController::class, 'index']);
+        Route::get('/admin/dashboard', [DashboardController::class, 'index']);
     });
 
     // =====================
