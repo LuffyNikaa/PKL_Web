@@ -14,6 +14,7 @@ use App\Http\Controllers\API\Web\ProfileWebController;
 use App\Http\Controllers\API\Mobile\JurnalMingguanController;
 use App\Http\Controllers\Admin\JurnalMingguanWebController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +70,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/jurnal-harian', [JurnalHarianWebController::class, 'index']);
         Route::get('/admin/jurnal-mingguan', [JurnalMingguanWebController::class, 'index']);
         Route::get('/admin/dashboard', [DashboardController::class, 'index']);
+        Route::get('/admin/monitoring',       [MonitoringController::class, 'index']);
+        Route::post('/admin/monitoring',      [MonitoringController::class, 'store']);
+        Route::put('/admin/monitoring/{id}',  [MonitoringController::class, 'update']);
+        Route::delete('/admin/monitoring/{id}',[MonitoringController::class, 'destroy']);
     });
 
     // =====================
@@ -101,5 +106,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/jurnal-mingguan',        [JurnalMingguanController::class, 'index']);
         Route::post('/jurnal-mingguan',       [JurnalMingguanController::class, 'store']);
         Route::put('/jurnal-mingguan/{id}',   [JurnalMingguanController::class, 'update']);
+        Route::get('/monitoring', [MonitoringController::class, 'mySiswa']);
     });
 });
