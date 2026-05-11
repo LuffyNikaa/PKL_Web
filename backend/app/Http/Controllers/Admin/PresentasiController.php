@@ -4,21 +4,27 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Presentasi;
 use App\Models\Siswa;
+use App\Models\Penempatan;
+use Carbon\Carbon;
 
 class PresentasiController extends Controller
 {
     // GET /api/admin/presentasi
     public function index(Request $request)
     {
-        $query = Presentasi::with(['siswa', 'siswa.dudi']);
+        $query = Presentasi::with(['penempatan.siswa', 'penempatan.dudi']);
 
         if ($request->filled('nama')) {
-            $query->whereHas('siswa', fn($q) =>
+            $query->whereHas('penempatan.siswa', fn($q) =>
                 $q->where('nama_siswa', 'like', '%' . $request->nama . '%')
             );
         }
-        if ($request->filled('status'))  $query->where('status_presentasi', $request->status);
-        if ($request->filled('tanggal')) $query->whereDate('tanggal_presentasi', $request->tanggal);
+        if ($request->filled('status')) {
+            $query->where('status_presentasi', $request->status);
+        }
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_presentasi', $request->tanggal);
+        }
 
         return response()->json([
             'data' => $query->orderBy('tanggal_presentasi', 'desc')->get()->map(fn($p) => $this->format($p))
@@ -29,32 +35,44 @@ class PresentasiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'siswa_id_siswa'      => 'required|exists:siswa,id_siswa',
-            'tanggal_presentasi'  => 'required|date',
-            'jam_presentasi'      => 'required',
-            'ruangan_presentasi'  => 'required|string|max:30',
-            'status_presentasi'   => 'required|in:dijadwalkan,selesai',
+            'id_siswa'             => 'required|exists:siswa,id_siswa',
+            'tanggal_presentasi'   => 'required|date',
+            'jam_presentasi'       => 'required',
+            'ruangan_presentasi'   => 'required|string|max:30',
+            'status_presentasi'    => 'required|in:dijadwalkan,selesai',
         ], [
-            'siswa_id_siswa.required'     => 'Siswa wajib dipilih',
-            'tanggal_presentasi.required' => 'Tanggal wajib diisi',
-            'jam_presentasi.required'     => 'Jam wajib diisi',
-            'ruangan_presentasi.required' => 'Ruangan wajib diisi',
+            'id_siswa.required'            => 'Siswa wajib dipilih',
+            'tanggal_presentasi.required'  => 'Tanggal wajib diisi',
+            'jam_presentasi.required'      => 'Jam wajib diisi',
+            'ruangan_presentasi.required'  => 'Ruangan wajib diisi',
         ]);
 
         try {
-            $siswa = Siswa::find($request->siswa_id_siswa);
+            // Cari penempatan aktif siswa
+            $penempatan = Penempatan::where('id_siswa', $request->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
 
-            $p = Presentasi::create([
-                'siswa_id_siswa'     => $siswa->id_siswa,
-                'siswa_id_user'      => $siswa->id_user,
-                'siswa_id_dudi'      => $siswa->id_dudi,
-                'tanggal_presentasi' => $request->tanggal_presentasi,
-                'jam_presentasi'     => $request->jam_presentasi,
-                'ruangan_presentasi' => $request->ruangan_presentasi,
-                'status_presentasi'  => $request->status_presentasi,
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 422);
+            }
+
+            $presentasi = Presentasi::create([
+                'id_penempatan'        => $penempatan->id_penempatan,
+                'tanggal_presentasi'   => $request->tanggal_presentasi,
+                'jam_presentasi'       => $request->jam_presentasi,
+                'ruangan_presentasi'   => $request->ruangan_presentasi,
+                'status_presentasi'    => $request->status_presentasi,
             ]);
 
-            return response()->json(['message' => 'Jadwal presentasi berhasil ditambahkan', 'data' => $this->format($p->load(['siswa', 'siswa.dudi']))], 201);
+            return response()->json([
+                'message' => 'Jadwal presentasi berhasil ditambahkan', 
+                'data' => $this->format($presentasi->load(['penempatan.siswa', 'penempatan.dudi']))
+            ], 201);
 
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
@@ -62,20 +80,28 @@ class PresentasiController extends Controller
     }
 
     // PUT /api/admin/presentasi/{id}
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $p = Presentasi::find($id);
-        if (!$p) return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        $presentasi = Presentasi::find($id);
+        if (!$presentasi) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
 
         $request->validate([
-            'tanggal_presentasi'  => 'required|date',
-            'jam_presentasi'      => 'required',
-            'ruangan_presentasi'  => 'required|string|max:30',
-            'status_presentasi'   => 'required|in:dijadwalkan,selesai',
+            'tanggal_presentasi'   => 'required|date',
+            'jam_presentasi'       => 'required',
+            'ruangan_presentasi'   => 'required|string|max:30',
+            'status_presentasi'    => 'required|in:dijadwalkan,selesai',
         ]);
 
         try {
-            $p->update($request->only(['tanggal_presentasi','jam_presentasi','ruangan_presentasi','status_presentasi']));
+            $presentasi->update($request->only([
+                'tanggal_presentasi',
+                'jam_presentasi',
+                'ruangan_presentasi',
+                'status_presentasi'
+            ]));
+            
             return response()->json(['message' => 'Jadwal presentasi berhasil diperbarui']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
@@ -83,11 +109,13 @@ class PresentasiController extends Controller
     }
 
     // DELETE /api/admin/presentasi/{id}
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $p = Presentasi::find($id);
-        if (!$p) return response()->json(['message' => 'Data tidak ditemukan'], 404);
-        $p->delete();
+        $presentasi = Presentasi::find($id);
+        if (!$presentasi) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+        $presentasi->delete();
         return response()->json(['message' => 'Jadwal presentasi berhasil dihapus']);
     }
 
@@ -95,11 +123,27 @@ class PresentasiController extends Controller
     public function mySiswa(Request $request)
     {
         try {
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
-            if (!$siswa) return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
 
-            $data = Presentasi::where('siswa_id_siswa', $siswa->id_siswa)
+            // Cari penempatan aktif
+            $penempatan = Penempatan::where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['ada_jadwal' => false, 'data' => []]);
+            }
+
+            $data = Presentasi::where('id_penempatan', $penempatan->id_penempatan)
                 ->orderBy('tanggal_presentasi', 'desc')
                 ->get();
 
@@ -116,12 +160,16 @@ class PresentasiController extends Controller
 
     private function format(Presentasi $p): array
     {
+        $siswa = $p->penempatan?->siswa;
+        $dudi  = $p->penempatan?->dudi;
+        
         return [
             'id_presentasi'     => $p->id_presentasi,
-            'nama_siswa'        => $p->siswa?->nama_siswa,
-            'tempat_pkl'        => $p->siswa?->dudi?->nama_dudi,
-            'tanggal'           => $p->tanggal_presentasi?->format('d-m-Y'),
-            'tanggal_raw'       => $p->tanggal_presentasi?->format('Y-m-d'),
+            'nama_siswa'        => $siswa?->nama_siswa ?? '-',
+            'kelas_siswa'       => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+            'tempat_pkl'        => $dudi?->nama_dudi ?? '-',
+            'tanggal'           => $p->tanggal_presentasi ? Carbon::parse($p->tanggal_presentasi)->format('d-m-Y') : '-',
+            'tanggal_raw'       => $p->tanggal_presentasi ? Carbon::parse($p->tanggal_presentasi)->format('Y-m-d') : null,
             'jam'               => $p->jam_presentasi,
             'ruangan'           => $p->ruangan_presentasi,
             'status'            => $p->status_presentasi,

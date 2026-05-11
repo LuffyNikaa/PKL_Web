@@ -69,9 +69,12 @@ export default function DataJurnalHarianPage() {
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       const json = await res.json();
+      console.log("Jurnal data:", json.data); // Debug log
       setJurnalList(json.data || []);
       setPage(1);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error("Fetch jurnal error:", err);
+    }
   };
 
   const fetchSiswa = async () => {
@@ -82,8 +85,9 @@ export default function DataJurnalHarianPage() {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
+      console.log("Siswa data:", json.data); // Debug log
       setSiswaList(json.data || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Fetch siswa error:", err); }
   };
 
   useEffect(() => { fetchJurnal({ nama: "", tanggal: "" }); }, []);
@@ -122,8 +126,9 @@ export default function DataJurnalHarianPage() {
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       const json = await res.json();
+      console.log("Rekap data for", siswa.nama_siswa, ":", json.data); // Debug log
       setRekapData(json.data || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Fetch rekap error:", err); }
     finally { setRekapLoading(false); }
   };
 
@@ -300,19 +305,21 @@ export default function DataJurnalHarianPage() {
                     <TableHeadCell>No</TableHeadCell>
                     <TableHeadCell>Nama</TableHeadCell>
                     <TableHeadCell>Tempat PKL</TableHeadCell>
+                    <TableHeadCell>Tanggal</TableHeadCell>
                     <TableHeadCell className="text-center">Aksi</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody className="divide-y">
                   {currentData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-400 py-8">Tidak ada data jurnal</TableCell>
+                      <TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada data jurnal</TableCell>
                     </TableRow>
                   ) : currentData.map((item, index) => (
                     <TableRow key={item.id_jurnal_harian} className="bg-white">
                       <TableCell>{start + index + 1}</TableCell>
                       <TableCell className="font-medium text-gray-900">{item.nama}</TableCell>
                       <TableCell>{item.tempat_pkl ?? "-"}</TableCell>
+                      <TableCell>{item.tanggal}</TableCell>
                       <TableCell className="text-center">
                         <button
                           onClick={() => { setSelected(item); setShowDetail(true); }}

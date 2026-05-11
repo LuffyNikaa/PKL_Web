@@ -16,6 +16,10 @@ use App\Http\Controllers\Admin\JurnalMingguanWebController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\Admin\PresentasiController;
+use App\Http\Controllers\Admin\JurusanController;
+use App\Http\Controllers\Admin\KelasController;
+use App\Http\Controllers\Admin\PeriodeController;
+use App\Http\Controllers\Admin\PenempatanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +48,7 @@ Route::get('/mobile/dudi', function () {
 // =====================
 // PROTECTED (LOGIN)
 // =====================
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
 
     // user login info
     Route::get('/user', function (Request $request) {
@@ -53,7 +57,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // logout
     Route::post('/logout', [LoginController::class, 'logout']);
     // profile
-    Route::get('/profile', [ProfileWebController::class, 'show']);
     Route::get('/profile', [ProfileWebController::class, 'show']);
     Route::put('/profile', [ProfileWebController::class, 'update']);
 
@@ -70,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/dudi', [DudiController::class, 'index']);
         Route::get('/admin/jurnal-harian', [JurnalHarianWebController::class, 'index']);
         Route::get('/admin/jurnal-mingguan', [JurnalMingguanWebController::class, 'index']);
+        Route::get('/admin/jurnal-mingguan/siswa/{id_siswa}', [JurnalMingguanWebController::class, 'getBySiswa']);
         Route::get('/admin/dashboard', [DashboardController::class, 'index']);
         Route::get('/admin/monitoring',       [MonitoringController::class, 'index']);
         Route::post('/admin/monitoring',      [MonitoringController::class, 'store']);
@@ -79,6 +83,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/presentasi',       [PresentasiController::class, 'store']);
         Route::put('/admin/presentasi/{id}',   [PresentasiController::class, 'update']);
         Route::delete('/admin/presentasi/{id}',[PresentasiController::class, 'destroy']);
+        Route::get('/admin/jurusan', [JurusanController::class, 'index']);
+        Route::post('/admin/jurusan', [JurusanController::class, 'store']);
+        Route::put('/admin/jurusan/{id}', [JurusanController::class, 'update']);
+        Route::delete('/admin/jurusan/{id}', [JurusanController::class, 'destroy']);
+        Route::get('/admin/kelas', [KelasController::class, 'index']);
+        Route::post('/admin/kelas', [KelasController::class, 'store']);
+        Route::put('/admin/kelas/{id}', [KelasController::class, 'update']);
+        Route::delete('/admin/kelas/{id}', [KelasController::class, 'destroy']);
+        Route::get('/admin/periode', [PeriodeController::class, 'index']);
+        Route::post('/admin/periode', [PeriodeController::class, 'store']);
+        Route::put('/admin/periode/{id}', [PeriodeController::class, 'update']);
+        Route::delete('/admin/periode/{id}', [PeriodeController::class, 'destroy']);
+        Route::get('/admin/penempatan', [PenempatanController::class, 'index']);
+        Route::post('/admin/penempatan', [PenempatanController::class, 'store']);
+        Route::put('/admin/penempatan/{id}', [PenempatanController::class, 'update']);
+        Route::delete('/admin/penempatan/{id}', [PenempatanController::class, 'destroy']);
     });
 
     // =====================
@@ -98,7 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // =====================
     // MOBILE - SISWA
     // =====================
-    Route::prefix('mobile')->group(function () {
+    Route::middleware('role:siswa')->prefix('mobile')->group(function () {
         Route::get('/siswa/profile', [SiswaController::class, 'profile']);
         Route::get('/absensi/status', [PresensiController::class, 'status']);   // cek status hari ini
         Route::post('/absensi', [PresensiController::class, 'store']);          // absen masuk

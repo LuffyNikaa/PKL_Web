@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, ...$roles)
+    public function handle(Request $request, Closure $next, string ...$roles)
     {
-        if (!in_array(auth()->user()->role_users, $roles)) {
+        if (!in_array($request->user()->role_users, $roles)) {
             return response()->json(['message' => 'Akses ditolak'], 403);
         }
         return $next($request);

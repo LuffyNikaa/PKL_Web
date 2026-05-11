@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Users;
 use App\Models\Siswa;
+use App\Models\Users;
+use App\Models\Penempatan;
+use App\Models\Dudi;
+use App\Models\Periode;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -17,11 +21,55 @@ class SiswaController extends Controller
     // =====================
     public function index()
     {
-        $siswa = Siswa::with(['user', 'dudi'])->get();
+        try {
+            $siswa = Siswa::with([
+                'kelas.jurusan',
+                'penempatan.dudi',
+                'user'
+            ])->get();
 
-        return response()->json([
-            'data' => $siswa
-        ], 200);
+            return response()->json([
+                'data' => $siswa->map(function ($s) {
+                    $kelasName = $s->kelas ? $s->kelas->tingkat_kelas . ' ' . $s->kelas->rombel : '-';
+                    
+                    // Ambil penempatan aktif (latest)
+                    $penempatan = $s->penempatan?->sortByDesc('id_penempatan')->first();
+                    
+                    return [
+                        'id_siswa' => $s->id_siswa,
+                        'id_users' => $s->id_users,
+                        'id_kelas' => $s->id_kelas,
+                        'nama_siswa' => $s->nama_siswa,
+                        'nis_siswa' => $s->nis_siswa,
+                        'jk_siswa' => $s->jk_siswa,
+                        'alamat_siswa' => $s->alamat_siswa,
+                        'no_siswa' => $s->no_siswa,
+                        'kelas' => $s->kelas ? [
+                            'id_kelas' => $s->kelas->id_kelas,
+                            'tingkat_kelas' => $s->kelas->tingkat_kelas,
+                            'rombel' => $s->kelas->rombel,
+                            'jurusan' => [
+                                'nama_jurusan' => $s->kelas->jurusan?->nama_jurusan,
+                            ],
+                        ] : null,
+                        'kelas_siswa' => $kelasName,
+                        'jurusan_siswa' => $s->kelas?->jurusan?->nama_jurusan ?? '-',
+                        'user' => $s->user ? [
+                            'email_users' => $s->user->email_users,
+                            'status_users' => $s->user->status_users,
+                        ] : null,
+                        'dudi' => $penempatan ? [
+                            'nama_dudi' => $penempatan->dudi?->nama_dudi
+                        ] : null,
+                    ];
+                })
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error fetching siswa',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // =====================
@@ -30,16 +78,15 @@ class SiswaController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nama_siswa'     => 'required|string|max:60',
-            'email'          => 'required|email|unique:users,email_users',
-            'password'       => 'required|min:6',
-            'jk_siwa'       => 'required|in:laki-laki,perempuan',
-            'jurusan_siswa'  => 'required|string|max:50',
-            'kelas_siswa'    => 'required|string|max:20',
-            'nis_siswa'      => 'required|string|max:20|unique:siswa,nis_siswa',
-            'alamat_siswa'   => 'required|string',
-            'no_siswa'       => 'required|string|max:15',
-            'id_dudi'        => 'required|exists:dudi,id_dudi'
+            'nama_siswa'   => 'required|string|max:60',
+            'email'        => 'required|email|unique:users,email_users',
+            'password'     => 'required|min:6',
+            'status_users' => 'required|in:aktif,nonaktif',
+            'jk_siswa'     => 'required|in:laki-laki,perempuan',
+            'id_kelas'     => 'required|exists:kelas,id_kelas',
+            'nis_siswa'    => 'required|string|max:20|unique:siswa,nis_siswa',
+            'alamat_siswa' => 'required|string',
+            'no_siswa'     => 'required|string|max:15',
         ]);
 
         if ($validator->fails()) {
@@ -50,26 +97,24 @@ class SiswaController extends Controller
         }
 
         DB::beginTransaction();
+
         try {
-            // 1️⃣ BUAT USER
             $user = Users::create([
                 'nama_users'     => $request->nama_siswa,
                 'email_users'    => $request->email,
                 'password_users' => Hash::make($request->password),
-                'role_users'     => 'siswa'
+                'role_users'     => 'siswa',
+                'status_users'   => $request->status_users,
             ]);
 
-            // 2️⃣ BUAT SISWA
             $siswa = Siswa::create([
-                'id_user'        => $user->id_users,
-                'id_dudi'        => $request->id_dudi,
-                'nama_siswa'     => $request->nama_siswa,
-                'jk_siwa'        => $request->jk_siwa, // ⬅ sesuai tabel
-                'jurusan_siswa'  => $request->jurusan_siswa,
-                'kelas_siswa'    => $request->kelas_siswa,
-                'nis_siswa'      => $request->nis_siswa,
-                'alamat_siswa'   => $request->alamat_siswa,
-                'no_siswa'       => $request->no_siswa,
+                'id_users'     => $user->id_users,
+                'id_kelas'     => $request->id_kelas,
+                'nama_siswa'   => $request->nama_siswa,
+                'jk_siswa'     => $request->jk_siswa,
+                'nis_siswa'    => $request->nis_siswa,
+                'alamat_siswa' => $request->alamat_siswa,
+                'no_siswa'     => $request->no_siswa,
             ]);
 
             DB::commit();
@@ -91,21 +136,23 @@ class SiswaController extends Controller
     // =====================
     // PUT /api/admin/siswa/{id}
     // =====================
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $siswa = Siswa::find($id);
+
         if (!$siswa) {
-            return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            return response()->json([
+                'message' => 'Siswa tidak ditemukan'
+            ], 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'nama_siswa'     => 'required|string|max:60',
-            'jk_siwa'       => 'required|in:laki-laki,perempuan',
-            'jurusan_siswa'  => 'required|string|max:50',
-            'kelas_siswa'    => 'required|string|max:20',
-            'alamat_siswa'   => 'required|string',
-            'no_siswa'       => 'required|string|max:15',
-            'id_dudi'        => 'required|exists:dudi,id_dudi'
+            'nama_siswa'   => 'required|string|max:60',
+            'status_users' => 'required|in:aktif,nonaktif',
+            'jk_siswa'     => 'required|in:laki-laki,perempuan',
+            'id_kelas'     => 'required|exists:kelas,id_kelas',
+            'alamat_siswa' => 'required|string',
+            'no_siswa'     => 'required|string|max:15',
         ]);
 
         if ($validator->fails()) {
@@ -116,23 +163,21 @@ class SiswaController extends Controller
         }
 
         DB::beginTransaction();
+
         try {
-            // Update siswa
             $siswa->update([
-                'id_dudi'        => $request->id_dudi,
-                'nama_siswa'     => $request->nama_siswa,
-                'jk_siwa'        => $request->jk_siwa,
-                'jurusan_siswa'  => $request->jurusan_siswa,
-                'kelas_siswa'    => $request->kelas_siswa,
-                'alamat_siswa'   => $request->alamat_siswa,
-                'no_siswa'       => $request->no_siswa,
+                'id_kelas'     => $request->id_kelas,
+                'nama_siswa'   => $request->nama_siswa,
+                'jk_siswa'     => $request->jk_siswa,
+                'alamat_siswa' => $request->alamat_siswa,
+                'no_siswa'     => $request->no_siswa,
             ]);
 
-            // Sinkron nama di users
-            $user = Users::find($siswa->id_user);
+            $user = Users::find($siswa->id_users);
             if ($user) {
                 $user->update([
-                    'nama_users' => $request->nama_siswa
+                    'nama_users'   => $request->nama_siswa,
+                    'status_users' => $request->status_users,
                 ]);
             }
 
@@ -154,24 +199,22 @@ class SiswaController extends Controller
     // =====================
     // DELETE /api/admin/siswa/{id}
     // =====================
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $siswa = Siswa::find($id);
+
         if (!$siswa) {
-            return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            return response()->json([
+                'message' => 'Siswa tidak ditemukan'
+            ], 404);
         }
 
         DB::beginTransaction();
+
         try {
-            // Hapus siswa
+            $idUser = $siswa->id_users;
             $siswa->delete();
-
-            // Hapus akun user
-            $user = Users::find($siswa->id_user);
-            if ($user) {
-                $user->delete();
-            }
-
+            Users::where('id_users', $idUser)->delete();
             DB::commit();
 
             return response()->json([
@@ -192,34 +235,84 @@ class SiswaController extends Controller
     // =====================
     public function profile(Request $request)
     {
-        // user yang sedang login (sanctum)
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        // ambil siswa berdasarkan user login
-        $siswa = Siswa::where('id_user', $user->id_users)->first();
+            $siswa = Siswa::with([
+                'user',
+                'kelas.jurusan'
+            ])
+            ->where('id_users', $user->id_users)
+            ->first();
 
-        // ambil siswa + relasi dudi
-        $siswa = Siswa::with('dudi')->where('id_user', $user->id_users)->first();
+            if (!$siswa) {
+                return response()->json([
+                    'message' => 'Data siswa tidak ditemukan'
+                ], 404);
+            }
 
-        if (!$siswa) {
+            // Cari penempatan aktif - JOIN ke periode
+            $penempatan = Penempatan::with(['dudi', 'periode', 'guru'])
+                ->where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                    ->where('tanggal_selesai', '>=', Carbon::today())
+                    ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            // Data DUDI dari penempatan aktif
+            $dudiData = null;
+            if ($penempatan && $penempatan->dudi) {
+                $dudiData = [
+                    'id_dudi'       => $penempatan->dudi->id_dudi,
+                    'nama_dudi'     => $penempatan->dudi->nama_dudi,
+                    'alamat_dudi'   => $penempatan->dudi->alamat_dudi,
+                    'latitude_dudi' => $penempatan->dudi->latitude_dudi,
+                    'longitude_dudi'=> $penempatan->dudi->longitude_dudi,
+                    'kontak_dudi'   => $penempatan->dudi->kontak_dudi,
+                ];
+            }
+
+            // Response untuk frontend mobile
             return response()->json([
-                'message' => 'Data siswa tidak ditemukan'
-            ], 404);
-        }
+                'data' => [
+                    // Data pribadi
+                    'id_siswa'      => $siswa->id_siswa,
+                    'nama'          => $siswa->nama_siswa,
+                    'email'         => $siswa->user?->email_users,
+                    'status'        => $siswa->user?->status_users,
+                    'nis'           => $siswa->nis_siswa,
+                    'jk'            => $siswa->jk_siswa,
+                    'alamat'        => $siswa->alamat_siswa,
+                    'no_hp'         => $siswa->no_siswa,
+                    
+                    // Data kelas & jurusan
+                    'jurusan'       => $siswa->kelas?->jurusan?->nama_jurusan,
+                    'kelas'         => trim(($siswa->kelas?->tingkat_kelas ?? '') . ' ' . ($siswa->kelas?->rombel ?? '')),
+                    
+                    // Data DUDI dari penempatan aktif (PENTING untuk presensi)
+                    'dudi'          => $dudiData['nama_dudi'] ?? null,
+                    'dudi_lat'      => $dudiData['latitude_dudi'] ?? null,
+                    'dudi_lon'      => $dudiData['longitude_dudi'] ?? null,
+                    'dudi_alamat'   => $dudiData['alamat_dudi'] ?? null,
+                    'dudi_kontak'   => $dudiData['kontak_dudi'] ?? null,
+                    
+                    // Data penempatan & periode
+                    'id_penempatan' => $penempatan->id_penempatan ?? null,
+                    'id_periode'    => $penempatan?->id_periode,
+                    'periode'       => $penempatan?->periode?->nama_periode,
+                    'tanggal_mulai' => $penempatan?->periode?->tanggal_mulai,
+                    'tanggal_selesai'=> $penempatan?->periode?->tanggal_selesai,
+                    'guru_pembimbing' => $penempatan?->guru?->nama_guru,
+                ]
+            ], 200);
 
-        return response()->json([
-            'data' => [
-                'nama'     => $siswa->nama_siswa,
-                'email'    => $siswa->user?->email_users,
-                'jurusan'  => $siswa->jurusan_siswa,
-                'kelas'    => $siswa->kelas_siswa,
-                'nis'      => $siswa->nis_siswa,
-                'alamat'   => $siswa->alamat_siswa,
-                'no_hp'    => $siswa->no_siswa,
-                'dudi'     => $siswa->dudi ? $siswa->dudi->nama_dudi : null,
-                'dudi_lat' => $siswa->dudi ? (float) $siswa->dudi->latitude_dudi : null,
-                'dudi_lon' => $siswa->dudi ? (float) $siswa->dudi->longitude_dudi : null,
-            ]
-        ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mengambil profile',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 }

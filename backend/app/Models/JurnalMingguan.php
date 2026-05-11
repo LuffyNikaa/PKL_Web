@@ -11,9 +11,7 @@ class JurnalMingguan extends Model
     public $timestamps    = false;
 
     protected $fillable = [
-        'id_siswa',
-        'id_user',
-        'id_dudi',
+        'id_penempatan',                    // ✅ Ganti dengan id_penempatan
         'tanggal_jurnal_mingguan',
         'kegiatan_jurnal_mingguan',
         'dokumentasi_jurnal_mingguan',
@@ -23,7 +21,35 @@ class JurnalMingguan extends Model
         'tanggal_jurnal_mingguan' => 'date',
     ];
 
-    public function siswa() { return $this->belongsTo(Siswa::class, 'id_siswa', 'id_siswa'); }
-    public function user()  { return $this->belongsTo(Users::class, 'id_user', 'id_users'); }
-    public function dudi()  { return $this->belongsTo(Dudi::class, 'id_dudi', 'id_dudi'); }
+    // Relasi ke penempatan
+    public function penempatan() 
+    { 
+        return $this->belongsTo(Penempatan::class, 'id_penempatan', 'id_penempatan'); 
+    }
+    
+    // Relasi ke siswa (via penempatan)
+    public function siswa() 
+    { 
+        return $this->hasOneThrough(
+            Siswa::class,
+            Penempatan::class,
+            'id_penempatan',
+            'id_siswa',
+            'id_penempatan',
+            'id_siswa'
+        );
+    }
+    
+    // Relasi ke dudi (via penempatan)
+    public function dudi() 
+    { 
+        return $this->hasOneThrough(
+            Dudi::class,
+            Penempatan::class,
+            'id_penempatan',
+            'id_dudi',
+            'id_penempatan',
+            'id_dudi'
+        );
+    }
 }

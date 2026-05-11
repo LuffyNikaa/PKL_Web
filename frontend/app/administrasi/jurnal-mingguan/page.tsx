@@ -14,9 +14,11 @@ import autoTable from "jspdf-autotable";
 type JurnalItem = {
   id_jurnal_mingguan: number;
   nama: string;
+  kelas: string;
   tempat_pkl: string;
   tanggal: string;
   range_tanggal: string;
+  minggu_ke: number;
   kegiatan: string;
   dokumentasi: string | null;
 };
@@ -24,7 +26,7 @@ type JurnalItem = {
 type Siswa = {
   id_siswa: number;
   nama_siswa: string;
-  kelas_siswa: string;
+  kelas: string;
   jurusan_siswa: string;
   dudi?: { nama_dudi: string };
 };
@@ -34,6 +36,7 @@ type RekapItem = {
   range_tanggal: string;
   tanggal: string;
   kegiatan: string;
+  dokumentasi: string | null;
 };
 
 type User = { name: string; email: string };
@@ -91,8 +94,30 @@ export default function DataJurnalMingguanPage() {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
-      setSiswaList(json.data || []);
+      // Format siswa dengan kelas
+      const siswaFormatted = (json.data || []).map((s: any) => ({
+        id_siswa: s.id_siswa,
+        nama_siswa: s.nama_siswa,
+        kelas: s.kelas ? `${s.kelas.tingkat_kelas} ${s.kelas.rombel}` : '-',
+        jurusan_siswa: s.kelas?.jurusan?.nama_jurusan || '-',
+        dudi: s.penempatan?.[0]?.dudi || null,
+      }));
+      setSiswaList(siswaFormatted);
     } catch (err) { console.error(err); }
+  };
+
+  const fetchRekapBySiswa = async (siswa: Siswa) => {
+    setRekapLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `http://localhost:8000/api/admin/jurnal-mingguan/siswa/${siswa.id_siswa}`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
+      );
+      const json = await res.json();
+      setRekapData(json.data || []);
+    } catch (err) { console.error(err); }
+    finally { setRekapLoading(false); }
   };
 
   useEffect(() => { fetchJurnal({ nama: "", tanggal: "" }); }, []);
@@ -122,27 +147,7 @@ export default function DataJurnalMingguanPage() {
 
   const handlePilihSiswa = async (siswa: Siswa) => {
     setSelectedSiswa(siswa);
-    setRekapLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const params = new URLSearchParams({ nama: siswa.nama_siswa });
-      const res = await fetch(
-        `http://localhost:8000/api/admin/jurnal-mingguan?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
-      );
-      const json = await res.json();
-      // Tambah minggu_ke berdasarkan urutan
-      const data = (json.data || [])
-        .sort((a: JurnalItem, b: JurnalItem) => a.tanggal.localeCompare(b.tanggal))
-        .map((item: JurnalItem, index: number) => ({
-          minggu_ke:     index + 1,
-          range_tanggal: item.range_tanggal,
-          tanggal:       item.tanggal,
-          kegiatan:      item.kegiatan,
-        }));
-      setRekapData(data);
-    } catch (err) { console.error(err); }
-    finally { setRekapLoading(false); }
+    await fetchRekapBySiswa(siswa);
   };
 
   const filteredSiswa = siswaList.filter((s) =>
@@ -176,7 +181,7 @@ export default function DataJurnalMingguanPage() {
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
     const infoKiri = [
       ["Nama Siswa", selectedSiswa.nama_siswa],
-      ["Kelas",      selectedSiswa.kelas_siswa],
+      ["Kelas",      selectedSiswa.kelas],
       ["Jurusan",    selectedSiswa.jurusan_siswa],
     ];
     const infoKanan = [
@@ -232,7 +237,7 @@ export default function DataJurnalMingguanPage() {
     autoTable(doc, {
       startY: sumY + 35,
       head: [["No", "Minggu ke-", "Periode", "Kegiatan"]],
-      body: rekapData.map((r) => [r.minggu_ke, `Minggu ke-${r.minggu_ke}`, r.range_tanggal, r.kegiatan]),
+      body: rekapData.map((r, idx) => [idx + 1, `Minggu ke-${r.minggu_ke}`, r.range_tanggal, r.kegiatan]),
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold", fontSize: 9 },
       bodyStyles: { fontSize: 9 },
       alternateRowStyles: { fillColor: [245, 247, 255] },
@@ -313,6 +318,7 @@ export default function DataJurnalMingguanPage() {
                   <TableRow>
                     <TableHeadCell>No</TableHeadCell>
                     <TableHeadCell>Nama</TableHeadCell>
+                    <TableHeadCell>Kelas</TableHeadCell>
                     <TableHeadCell>Tempat PKL</TableHeadCell>
                     <TableHeadCell className="text-center">Aksi</TableHeadCell>
                   </TableRow>
@@ -320,12 +326,13 @@ export default function DataJurnalMingguanPage() {
                 <TableBody className="divide-y">
                   {currentData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-400 py-8">Tidak ada data jurnal mingguan</TableCell>
+                      <TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada data jurnal mingguan</TableCell>
                     </TableRow>
                   ) : currentData.map((item, index) => (
                     <TableRow key={item.id_jurnal_mingguan} className="bg-white">
                       <TableCell>{start + index + 1}</TableCell>
                       <TableCell className="font-medium text-gray-900">{item.nama}</TableCell>
+                      <TableCell>{item.kelas || "-"}</TableCell>
                       <TableCell>{item.tempat_pkl ?? "-"}</TableCell>
                       <TableCell className="text-center">
                         <button
@@ -410,7 +417,7 @@ export default function DataJurnalMingguanPage() {
                       }`}
                     >
                       <p className="text-sm font-medium text-gray-900">{siswa.nama_siswa}</p>
-                      <p className="text-xs text-gray-500">{siswa.kelas_siswa} · {siswa.jurusan_siswa}</p>
+                      <p className="text-xs text-gray-500">{siswa.kelas} · {siswa.jurusan_siswa}</p>
                       {siswa.dudi && <p className="text-xs text-blue-500">{siswa.dudi.nama_dudi}</p>}
                     </button>
                   ))}
@@ -421,7 +428,7 @@ export default function DataJurnalMingguanPage() {
               <div className="border border-gray-200 rounded-lg overflow-hidden flex flex-col">
                 <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
                   <p className="text-sm font-semibold text-gray-700">
-                    {selectedSiswa ? `Rekap: ${selectedSiswa.nama_siswa}` : "Rekap Jurnal Mingguan"}
+                    {selectedSiswa ? `Rekap: ${selectedSiswa.nama_siswa}` : "Rekap Jurnal"}
                   </p>
                 </div>
                 {!selectedSiswa ? (
@@ -438,13 +445,13 @@ export default function DataJurnalMingguanPage() {
                     <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-100">
                       <div className="text-center p-2 bg-gray-50 rounded-lg">
                         <p className="text-lg font-bold text-gray-700">{rekapData.length}</p>
-                        <p className="text-xs text-gray-500">Total Minggu</p>
+                        <p className="text-xs text-gray-500">Total Jurnal</p>
                       </div>
                       <div className="text-center p-2 bg-blue-50 rounded-lg">
                         <p className="text-sm font-bold text-blue-600">
-                          {rekapData.length > 0 ? rekapData[rekapData.length - 1].range_tanggal : "-"}
+                          {rekapData.length > 0 ? rekapData[0].range_tanggal : "-"}
                         </p>
-                        <p className="text-xs text-blue-400">Minggu Pertama</p>
+                        <p className="text-xs text-blue-400">Jurnal Pertama</p>
                       </div>
                     </div>
 
@@ -456,17 +463,15 @@ export default function DataJurnalMingguanPage() {
                         <table className="w-full text-xs">
                           <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">Minggu</th>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">Periode</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">Tanggal</th>
                               <th className="px-3 py-2 text-left text-gray-600 font-medium">Kegiatan</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {rekapData.map((r) => (
                               <tr key={r.minggu_ke} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-gray-700 whitespace-nowrap font-medium">Ke-{r.minggu_ke}</td>
-                                <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{r.range_tanggal}</td>
-                                <td className="px-3 py-2 text-gray-600 max-w-[140px] truncate">{r.kegiatan}</td>
+                                <td className="px-3 py-2 text-gray-700 whitespace-nowrap font-medium">{r.range_tanggal}</td>
+                                <td className="px-3 py-2 text-gray-600">{r.kegiatan}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -491,35 +496,42 @@ export default function DataJurnalMingguanPage() {
           <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Jurnal Mingguan</ModalHeader>
           <ModalBody className="px-6 py-4">
             {selected && (
-              <form className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="d_nama">Nama Siswa</Label>
-                    <TextInput id="d_nama" value={selected.nama ?? "-"} readOnly className="mt-1" />
+                    <Label>Nama Siswa</Label>
+                    <TextInput value={selected.nama ?? "-"} readOnly className="mt-1" />
                   </div>
                   <div>
-                    <Label htmlFor="d_pkl">Tempat PKL</Label>
-                    <TextInput id="d_pkl" value={selected.tempat_pkl ?? "-"} readOnly className="mt-1" />
+                    <Label>Kelas</Label>
+                    <TextInput value={selected.kelas ?? "-"} readOnly className="mt-1" />
                   </div>
                   <div>
-                    <Label htmlFor="d_periode">Periode Minggu</Label>
-                    <TextInput id="d_periode" value={selected.range_tanggal ?? "-"} readOnly className="mt-1" />
+                    <Label>Tempat PKL</Label>
+                    <TextInput value={selected.tempat_pkl ?? "-"} readOnly className="mt-1" />
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="d_kegiatan">Kegiatan</Label>
-                    <textarea
-                      id="d_kegiatan"
-                      value={selected.kegiatan ?? "-"}
-                      readOnly
-                      rows={5}
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 resize-none focus:outline-none"
-                    />
+                    <Label>Tanggal</Label>
+                    <TextInput value={selected.range_tanggal ?? "-"} readOnly className="mt-1" />
                   </div>
+                  <div>
+                    <Label>Minggu ke-</Label>
+                    <TextInput value={selected.minggu_ke ?? "-"} readOnly className="mt-1" />
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label>Kegiatan</Label>
+                  <textarea
+                    value={selected.kegiatan ?? "-"}
+                    readOnly
+                    rows={4}
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 resize-none focus:outline-none"
+                  />
                 </div>
 
-                {/* Dokumentasi full width */}
+                {/* Dokumentasi */}
                 {selected.dokumentasi && (
                   <div className="col-span-2">
                     <Label>Dokumentasi</Label>
@@ -528,14 +540,14 @@ export default function DataJurnalMingguanPage() {
                         <img
                           src={selected.dokumentasi}
                           alt="Dokumentasi"
-                          className="w-full max-h-40 object-contain rounded-lg border border-gray-200 cursor-pointer hover:opacity-90"
+                          className="w-full max-h-60 object-contain rounded-lg border border-gray-200 cursor-pointer hover:opacity-90"
                         />
                       </a>
                       <p className="text-xs text-gray-400 mt-1 text-center">Klik gambar untuk melihat ukuran penuh</p>
                     </div>
                   </div>
                 )}
-              </form>
+              </div>
             )}
           </ModalBody>
           <ModalFooter className="px-6 py-4 border-t border-gray-200">

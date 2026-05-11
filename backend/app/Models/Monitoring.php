@@ -11,20 +11,47 @@ class Monitoring extends Model
     public $timestamps    = false;
 
     protected $fillable = [
+        'id_penempatan',           // ✅ FK ke penempatan
         'tanggal_monitoring',
         'jam_monitoring',
         'lokasi_monitoring',
         'alasan_monitoring',
         'status_monitoring',
-        'siswa_id_siswa',
-        'siswa_id_user',
-        'siswa_id_dudi',
-        'guru_id_guru',
-        'guru_id_users',
     ];
 
-    protected $casts = ['tanggal_monitoring' => 'date'];
+    protected $casts = [
+        'tanggal_monitoring' => 'date',
+    ];
 
-    public function siswa() { return $this->belongsTo(Siswa::class, 'siswa_id_siswa', 'id_siswa'); }
-    public function guru()  { return $this->belongsTo(Guru::class, 'guru_id_guru', 'id_guru'); }
+    // Relasi ke penempatan
+    public function penempatan() 
+    { 
+        return $this->belongsTo(Penempatan::class, 'id_penempatan', 'id_penempatan'); 
+    }
+    
+    // Relasi ke siswa (via penempatan)
+    public function siswa() 
+    { 
+        return $this->hasOneThrough(
+            Siswa::class,
+            Penempatan::class,
+            'id_penempatan',  // Foreign key di penempatan (yang nyambung ke monitoring)
+            'id_siswa',       // Foreign key di siswa (yang nyambung ke penempatan)
+            'id_penempatan',  // Local key di monitoring
+            'id_siswa'        // Local key di penempatan
+        );
+    }
+    
+    // Relasi ke dudi (via penempatan)
+    public function dudi() 
+    { 
+        return $this->hasOneThrough(
+            Dudi::class,
+            Penempatan::class,
+            'id_penempatan',
+            'id_dudi',
+            'id_penempatan',
+            'id_dudi'
+        );
+    }
 }

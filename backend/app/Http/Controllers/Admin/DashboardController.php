@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Guru;
 use App\Models\Dudi;
+use App\Models\Jurusan;
 
 class DashboardController extends Controller
 {
@@ -12,12 +13,14 @@ class DashboardController extends Controller
     public function index()
     {
         try {
-            // Hitung siswa per jurusan
-            $siswaPerJurusan = Siswa::selectRaw('jurusan_siswa, COUNT(*) as total')
-                ->groupBy('jurusan_siswa')
+            // Hitung siswa per jurusan dengan join
+            $siswaPerJurusan = Siswa::selectRaw('jurusan.nama_jurusan as label, COUNT(*) as total')
+                ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
+                ->join('jurusan', 'kelas.id_jurusan', '=', 'jurusan.id_jurusan')
+                ->groupBy('jurusan.nama_jurusan')
                 ->get()
                 ->map(fn($s) => [
-                    'label' => $s->jurusan_siswa,
+                    'label' => $s->label,
                     'total' => $s->total,
                 ]);
 

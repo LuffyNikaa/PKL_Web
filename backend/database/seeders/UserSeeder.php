@@ -14,13 +14,13 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        // Nonaktifkan timestamps sementara
         Users::withoutTimestamps(function () {
             Users::create([
                 'nama_users' => 'Administrator',
-                'email_users' => 'admin@sekolah.com',
+                'email_users' => 'admin@gmail.com',
                 'password_users' => Hash::make('admin123'),
-                'role_users' => 'admin'
+                'role_users' => 'admin',
+                'status_users' => 'aktif'
             ]);
         });
     }

@@ -5,21 +5,27 @@ use Illuminate\Http\Request;
 use App\Models\Monitoring;
 use App\Models\Siswa;
 use App\Models\Guru;
+use App\Models\Penempatan;
+use Carbon\Carbon;
 
 class MonitoringController extends Controller
 {
     // GET /api/admin/monitoring
     public function index(Request $request)
     {
-        $query = Monitoring::with(['siswa', 'siswa.dudi', 'guru']);
+        $query = Monitoring::with(['penempatan.siswa', 'penempatan.dudi', 'penempatan.guru']);
 
         if ($request->filled('nama')) {
-            $query->whereHas('siswa', fn($q) =>
+            $query->whereHas('penempatan.siswa', fn($q) =>
                 $q->where('nama_siswa', 'like', '%' . $request->nama . '%')
             );
         }
-        if ($request->filled('status'))  $query->where('status_monitoring', $request->status);
-        if ($request->filled('tanggal')) $query->whereDate('tanggal_monitoring', $request->tanggal);
+        if ($request->filled('status')) {
+            $query->where('status_monitoring', $request->status);
+        }
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_monitoring', $request->tanggal);
+        }
 
         return response()->json([
             'data' => $query->orderBy('tanggal_monitoring', 'desc')->get()->map(fn($m) => $this->format($m))
@@ -30,30 +36,38 @@ class MonitoringController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'siswa_id_siswa'     => 'required|exists:siswa,id_siswa',
+            'id_siswa'           => 'required|exists:siswa,id_siswa',
             'tanggal_monitoring' => 'required|date',
             'jam_monitoring'     => 'required',
             'lokasi_monitoring'  => 'required|string|max:150',
             'alasan_monitoring'  => 'nullable|string',
             'status_monitoring'  => 'required|in:dijadwalkan,selesai',
         ], [
-            'siswa_id_siswa.required'     => 'Siswa wajib dipilih',
+            'id_siswa.required'           => 'Siswa wajib dipilih',
             'tanggal_monitoring.required' => 'Tanggal wajib diisi',
             'jam_monitoring.required'     => 'Jam wajib diisi',
             'lokasi_monitoring.required'  => 'Lokasi wajib diisi',
         ]);
 
         try {
-            $user  = $request->user();
-            $guru  = Guru::where('id_users', $user->id_users)->first();
-            $siswa = Siswa::find($request->siswa_id_siswa);
+            $user = $request->user();
+            
+            // Cari penempatan aktif siswa
+            $penempatan = Penempatan::with('guru')
+                ->where('id_siswa', $request->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
 
-            $m = Monitoring::create([
-                'siswa_id_siswa'     => $siswa->id_siswa,
-                'siswa_id_user'      => $siswa->id_user,
-                'siswa_id_dudi'      => $siswa->id_dudi,
-                'guru_id_guru'       => $guru?->id_guru,
-                'guru_id_users'      => $user->id_users,
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 422);
+            }
+
+            $monitoring = Monitoring::create([
+                'id_penempatan'      => $penempatan->id_penempatan,
                 'tanggal_monitoring' => $request->tanggal_monitoring,
                 'jam_monitoring'     => $request->jam_monitoring,
                 'lokasi_monitoring'  => $request->lokasi_monitoring,
@@ -61,7 +75,10 @@ class MonitoringController extends Controller
                 'status_monitoring'  => $request->status_monitoring,
             ]);
 
-            return response()->json(['message' => 'Jadwal monitoring berhasil ditambahkan', 'data' => $this->format($m->load(['siswa', 'siswa.dudi', 'guru']))], 201);
+            return response()->json([
+                'message' => 'Jadwal monitoring berhasil ditambahkan', 
+                'data' => $this->format($monitoring->load(['penempatan.siswa', 'penempatan.dudi', 'penempatan.guru']))
+            ], 201);
 
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
@@ -69,10 +86,12 @@ class MonitoringController extends Controller
     }
 
     // PUT /api/admin/monitoring/{id}
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $m = Monitoring::find($id);
-        if (!$m) return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        $monitoring = Monitoring::find($id);
+        if (!$monitoring) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
 
         $request->validate([
             'tanggal_monitoring' => 'required|date',
@@ -83,7 +102,14 @@ class MonitoringController extends Controller
         ]);
 
         try {
-            $m->update($request->only(['tanggal_monitoring','jam_monitoring','lokasi_monitoring','alasan_monitoring','status_monitoring']));
+            $monitoring->update($request->only([
+                'tanggal_monitoring',
+                'jam_monitoring',
+                'lokasi_monitoring',
+                'alasan_monitoring',
+                'status_monitoring'
+            ]));
+            
             return response()->json(['message' => 'Jadwal monitoring berhasil diperbarui']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
@@ -91,11 +117,13 @@ class MonitoringController extends Controller
     }
 
     // DELETE /api/admin/monitoring/{id}
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $m = Monitoring::find($id);
-        if (!$m) return response()->json(['message' => 'Data tidak ditemukan'], 404);
-        $m->delete();
+        $monitoring = Monitoring::find($id);
+        if (!$monitoring) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+        $monitoring->delete();
         return response()->json(['message' => 'Jadwal monitoring berhasil dihapus']);
     }
 
@@ -103,21 +131,46 @@ class MonitoringController extends Controller
     public function mySiswa(Request $request)
     {
         try {
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
-            if (!$siswa) return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
 
-            $data = Monitoring::with(['guru'])
-                ->where('siswa_id_siswa', $siswa->id_siswa)
+            // Cari penempatan aktif
+            $penempatan = Penempatan::with('guru')
+                ->where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                    ->where('tanggal_selesai', '>=', Carbon::today())
+                    ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['ada_jadwal' => false, 'data' => []]);
+            }
+
+            $data = Monitoring::with(['penempatan.guru'])
+                ->where('id_penempatan', $penempatan->id_penempatan)
                 ->orderBy('tanggal_monitoring', 'desc')
                 ->get();
 
-            // Cek apakah ada jadwal dijadwalkan
             $adaJadwal = $data->where('status_monitoring', 'dijadwalkan')->count() > 0;
 
             return response()->json([
                 'ada_jadwal' => $adaJadwal,
-                'data'       => $data->map(fn($m) => $this->format($m)),
+                'data'       => $data->map(fn($m) => [
+                    'id_monitoring'  => $m->id_monitoring,
+                    'nama_guru'      => $m->penempatan?->guru?->nama_guru ?? '-',
+                    'tanggal'        => $m->tanggal_monitoring ? Carbon::parse($m->tanggal_monitoring)->translatedFormat('d F Y') : '-',
+                    'tanggal_raw'    => $m->tanggal_monitoring ? Carbon::parse($m->tanggal_monitoring)->format('Y-m-d') : null,
+                    'jam'            => $m->jam_monitoring,
+                    'lokasi'         => $m->lokasi_monitoring,
+                    'alasan'         => $m->alasan_monitoring,
+                    'status'         => $m->status_monitoring,
+                ])
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
@@ -126,13 +179,19 @@ class MonitoringController extends Controller
 
     private function format(Monitoring $m): array
     {
+        $siswa = $m->penempatan?->siswa;
+        $dudi  = $m->penempatan?->dudi;
+        $guru  = $m->penempatan?->guru;
+        
         return [
             'id_monitoring'  => $m->id_monitoring,
-            'nama_siswa'     => $m->siswa?->nama_siswa,
-            'tempat_pkl'     => $m->siswa?->dudi?->nama_dudi,
-            'nama_guru'      => $m->guru?->nama_guru,
-            'tanggal'        => $m->tanggal_monitoring?->format('d-m-Y'),
-            'tanggal_raw'    => $m->tanggal_monitoring?->format('Y-m-d'),
+            'nama_siswa'     => $siswa?->nama_siswa ?? '-',
+            'kelas_siswa'    => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+            'jurusan_siswa'  => $siswa?->kelas?->jurusan?->nama_jurusan ?? '-',
+            'tempat_pkl'     => $dudi?->nama_dudi ?? '-',
+            'nama_guru'      => $guru?->nama_guru ?? '-',
+            'tanggal'        => $m->tanggal_monitoring ? Carbon::parse($m->tanggal_monitoring)->format('d-m-Y') : '-',
+            'tanggal_raw'    => $m->tanggal_monitoring ? Carbon::parse($m->tanggal_monitoring)->format('Y-m-d') : null,
             'jam'            => $m->jam_monitoring,
             'lokasi'         => $m->lokasi_monitoring,
             'alasan'         => $m->alasan_monitoring,

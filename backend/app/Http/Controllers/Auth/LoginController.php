@@ -28,6 +28,11 @@ class LoginController extends Controller
             return response()->json(['message' => 'Akses CMS ditolak'], 403);
         }
 
+        // 🚫 CEK STATUS
+        if ($user->status_users !== 'aktif') {
+            return response()->json(['message' => 'Akun anda sedang dinonaktifkan'], 403);
+        }
+
         $user->tokens()->where('name', 'web-token')->delete();
 
         $token = $user->createToken('web-token')->plainTextToken;
@@ -60,6 +65,11 @@ class LoginController extends Controller
     // Cek role untuk mobile (admin atau siswa)
     if (!in_array($user->role_users, ['admin', 'siswa'])) {
         return response()->json(['message' => 'Akses Mobile ditolak'], 403);
+    }
+
+    // 🚫 CEK STATUS
+    if ($user->status_users !== 'aktif') {
+        return response()->json(['message' => 'Akun anda sedang dinonaktifkan'], 403);
     }
 
     // Hapus token lama jika ada

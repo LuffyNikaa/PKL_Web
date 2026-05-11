@@ -14,11 +14,17 @@ type Guru = {
   jk_guru: string;
   alamat_guru: string;
   no_guru: string;
+  
+  user?: {
+    email_users: string;
+    status_users: string;
+  };
 };
 
 type User = {
   name: string;
   email: string;
+  status_users: string;
 };
 
 const DATA_PER_PAGE = 10;
@@ -44,6 +50,7 @@ const [isEditMode, setIsEditMode] = useState(false)
     no_guru: "",
     email_users: "",
     password: "",
+    status_users: "aktif",
   });
 
   useEffect(() => {
@@ -108,6 +115,7 @@ const [isEditMode, setIsEditMode] = useState(false)
         no_guru: "",
         email_users: "",
         password: "",
+        status_users: "aktif",
       });
 
     } catch (err) {
@@ -128,6 +136,7 @@ const handleEditGuru = () => {
       no_guru: selectedGuru.no_guru,
       email_users: "", // biasanya email login harus diisi, sesuaikan jika API berbeda
       password: "",
+      status_users: selectedGuru.user?.status_users || "aktif",
     });
     setIsEditMode(true);
   }
@@ -227,6 +236,7 @@ const handleUpdateGuru = async () => {
                     <TableHeadCell>Mapel</TableHeadCell>
                     <TableHeadCell>Jenis Kelamin</TableHeadCell>
                     <TableHeadCell>Alamat</TableHeadCell>
+                    <TableHeadCell>Status</TableHeadCell>
                     <TableHeadCell className="text-center">Aksi</TableHeadCell>
                   </TableRow>
                 </TableHead>
@@ -244,6 +254,17 @@ const handleUpdateGuru = async () => {
                       <TableCell>{guru.mapel_guru}</TableCell>
                       <TableCell>{guru.jk_guru}</TableCell>
                       <TableCell>{guru.alamat_guru}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded text-white text-xs ${
+                            guru.user?.status_users === "aktif"
+                              ? "bg-green-500"
+                              : "bg-red-500"
+                          }`}
+                        >
+                          {guru.user?.status_users}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <button
                           onClick={() => {
@@ -405,6 +426,20 @@ const handleUpdateGuru = async () => {
                     required
                   />
               </div>
+
+              <div>
+                <Label htmlFor="status_users">Status Akun</Label>
+                <Select
+                  id="status_users"
+                  name="status_users"
+                  value={form.status_users}
+                  onChange={handleFormChange}
+                  required
+                >
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
+                </Select>
+              </div>
             </div>
           </form>
         </ModalBody>
@@ -504,6 +539,20 @@ const handleUpdateGuru = async () => {
                   readOnly={!isEditMode}
                 />
               </div>
+
+              <div>
+                <Label htmlFor="status_users">Status Akun</Label>
+                <Select
+                  id="status_users"
+                  name="status_users"
+                  value={form.status_users}
+                  onChange={handleFormChange}
+                  disabled={!isEditMode}
+                >
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
+                </Select>
+              </div>
             </div>
           </form>
           )}
@@ -537,6 +586,7 @@ const handleUpdateGuru = async () => {
                     no_guru: "",
                     email_users: "",
                     password: "",
+                    status_users: "aktif",
                   });
                 }}
               >

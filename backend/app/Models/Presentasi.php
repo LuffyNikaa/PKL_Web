@@ -11,16 +11,20 @@ class Presentasi extends Model
     public $timestamps    = false;
 
     protected $fillable = [
+        'id_penempatan',           // ✅ Ganti dengan id_penempatan
         'tanggal_presentasi',
         'jam_presentasi',
         'ruangan_presentasi',
         'status_presentasi',
-        'siswa_id_siswa',
-        'siswa_id_user',
-        'siswa_id_dudi',
     ];
 
-    protected $casts = ['tanggal_presentasi' => 'date'];
+    protected $casts = [
+        'tanggal_presentasi' => 'date',
+    ];
 
-    public function siswa() { return $this->belongsTo(Siswa::class, 'siswa_id_siswa', 'id_siswa'); }
+    // Relasi ke penempatan
+    public function penempatan() 
+    { 
+        return $this->belongsTo(Penempatan::class, 'id_penempatan', 'id_penempatan'); 
+    }
 }

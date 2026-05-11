@@ -12,6 +12,7 @@ import {
 type PresentasiItem = {
   id_presentasi: number;
   nama_siswa: string;
+  kelas_siswa: string;
   tempat_pkl: string;
   tanggal: string;
   tanggal_raw: string;
@@ -20,16 +21,25 @@ type PresentasiItem = {
   status: string;
 };
 
-type Siswa = { id_siswa: number; nama_siswa: string; kelas_siswa: string; jurusan_siswa: string };
-type User  = { name: string; email: string };
+type Siswa = { 
+  id_siswa: number; 
+  nama_siswa: string; 
+  kelas: string;
+  jurusan: string;
+};
+
+type User = { name: string; email: string };
 
 const DATA_PER_PAGE = 10;
 const statusColor = (s: string) => s === "dijadwalkan" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
 const statusLabel = (s: string) => s === "dijadwalkan" ? "Dijadwalkan" : "Selesai";
 
 const emptyForm = {
-  siswa_id_siswa: "", tanggal_presentasi: "", jam_presentasi: "",
-  ruangan_presentasi: "", status_presentasi: "dijadwalkan",
+  id_siswa: "", 
+  tanggal_presentasi: "", 
+  jam_presentasi: "",
+  ruangan_presentasi: "", 
+  status_presentasi: "dijadwalkan",
 };
 
 export default function PresentasiPage() {
@@ -71,53 +81,105 @@ export default function PresentasiPage() {
   };
 
   const fetchSiswa = async () => {
-    const token = localStorage.getItem("token");
-    const res = await fetch("http://localhost:8000/api/admin/siswa", {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
-    const json = await res.json();
-    setSiswaList(json.data || []);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:8000/api/admin/siswa", {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      const json = await res.json();
+      
+      // Format siswa dengan kelas yang benar
+      const siswaFormatted = (json.data || []).map((s: any) => {
+        let kelas = '-';
+        let jurusan = '-';
+        
+        if (s.kelas) {
+          kelas = `${s.kelas.tingkat_kelas || ''} ${s.kelas.rombel || ''}`.trim();
+          if (s.kelas.jurusan) {
+            jurusan = s.kelas.jurusan.nama_jurusan || '-';
+          }
+        }
+        
+        return {
+          id_siswa: s.id_siswa,
+          nama_siswa: s.nama_siswa,
+          kelas: kelas,
+          jurusan: jurusan,
+        };
+      });
+      
+      setSiswaList(siswaFormatted);
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => { fetchList({ nama: "", status: "", tanggal: "" }); }, []);
 
-  const handleChange = (e: React.ChangeEvent<any>) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const openTambah = async () => {
     await fetchSiswa();
-    setForm(emptyForm); setIsEdit(false); setShowTambah(true);
+    setForm(emptyForm); 
+    setIsEdit(false); 
+    setShowTambah(true);
   };
 
   const openEdit = async () => {
     if (!selected) return;
     await fetchSiswa();
+    // Cari id_siswa dari data yang dipilih
+    const siswa = siswaList.find(s => s.nama_siswa === selected.nama_siswa);
     setForm({
-      siswa_id_siswa:    String(selected.id_presentasi),
+      id_siswa: siswa?.id_siswa?.toString() || "",
       tanggal_presentasi: selected.tanggal_raw,
-      jam_presentasi:    selected.jam,
+      jam_presentasi: selected.jam,
       ruangan_presentasi: selected.ruangan,
       status_presentasi: selected.status,
     });
-    setIsEdit(true); setShowDetail(false); setShowTambah(true);
+    setIsEdit(true); 
+    setShowDetail(false); 
+    setShowTambah(true);
   };
 
   const handleSimpan = async () => {
     setSaving(true);
     try {
-      const token  = localStorage.getItem("token");
-      const url    = isEdit ? `http://localhost:8000/api/admin/presentasi/${selected?.id_presentasi}` : "http://localhost:8000/api/admin/presentasi";
+      const token = localStorage.getItem("token");
+      const url = isEdit 
+        ? `http://localhost:8000/api/admin/presentasi/${selected?.id_presentasi}` 
+        : "http://localhost:8000/api/admin/presentasi";
       const method = isEdit ? "PUT" : "POST";
+      
+      const payload = isEdit 
+        ? {
+            tanggal_presentasi: form.tanggal_presentasi,
+            jam_presentasi: form.jam_presentasi,
+            ruangan_presentasi: form.ruangan_presentasi,
+            status_presentasi: form.status_presentasi,
+          }
+        : {
+            id_siswa: parseInt(form.id_siswa),
+            tanggal_presentasi: form.tanggal_presentasi,
+            jam_presentasi: form.jam_presentasi,
+            ruangan_presentasi: form.ruangan_presentasi,
+            status_presentasi: form.status_presentasi,
+          };
+      
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message);
       fetchList(activeFilter);
       setShowTambah(false);
-    } catch (err: any) { alert(err.message); }
-    finally { setSaving(false); }
+    } catch (err: any) { 
+      alert(err.message); 
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const handleDelete = async () => {
@@ -132,20 +194,26 @@ export default function PresentasiPage() {
 
   const applyFilter = () => {
     const f = { nama: filterNama, status: filterStatus, tanggal: filterTanggal };
-    setActiveFilter(f); fetchList(f); setShowFilter(false);
+    setActiveFilter(f); 
+    fetchList(f); 
+    setShowFilter(false);
   };
 
   const resetFilter = () => {
-    setFilterNama(""); setFilterStatus(""); setFilterTanggal("");
+    setFilterNama(""); 
+    setFilterStatus(""); 
+    setFilterTanggal("");
     const empty = { nama: "", status: "", tanggal: "" };
-    setActiveFilter(empty); fetchList(empty); setShowFilter(false);
+    setActiveFilter(empty); 
+    fetchList(empty); 
+    setShowFilter(false);
   };
 
-  const hasFilter   = activeFilter.nama || activeFilter.status || activeFilter.tanggal;
-  const totalPages  = Math.ceil(list.length / DATA_PER_PAGE);
-  const start       = (page - 1) * DATA_PER_PAGE;
+  const hasFilter = activeFilter.nama || activeFilter.status || activeFilter.tanggal;
+  const totalPages = Math.ceil(list.length / DATA_PER_PAGE);
+  const start = (page - 1) * DATA_PER_PAGE;
   const currentData = list.slice(start, start + DATA_PER_PAGE);
-  const pages       = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   if (!user) return null;
 
@@ -184,6 +252,7 @@ export default function PresentasiPage() {
                   <TableRow>
                     <TableHeadCell>No</TableHeadCell>
                     <TableHeadCell>Nama Siswa</TableHeadCell>
+                    <TableHeadCell>Kelas</TableHeadCell>
                     <TableHeadCell>Tempat PKL</TableHeadCell>
                     <TableHeadCell>Tanggal</TableHeadCell>
                     <TableHeadCell>Jam</TableHeadCell>
@@ -194,11 +263,12 @@ export default function PresentasiPage() {
                 </TableHead>
                 <TableBody className="divide-y">
                   {currentData.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center text-gray-400 py-8">Tidak ada data presentasi</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">Tidak ada data presentasi</TableCell></TableRow>
                   ) : currentData.map((item, i) => (
                     <TableRow key={item.id_presentasi} className="bg-white">
                       <TableCell>{start + i + 1}</TableCell>
                       <TableCell className="font-medium text-gray-900">{item.nama_siswa}</TableCell>
+                      <TableCell>{item.kelas_siswa || "-"}</TableCell>
                       <TableCell>{item.tempat_pkl ?? "-"}</TableCell>
                       <TableCell>{item.tanggal}</TableCell>
                       <TableCell>{item.jam ?? "-"}</TableCell>
@@ -252,20 +322,33 @@ export default function PresentasiPage() {
         </Modal>
 
         {/* Modal Tambah/Edit */}
-        <Modal dismissible show={showTambah} size="4xl" onClose={() => setShowTambah(false)}>
+        <Modal dismissible show={showTambah} size="xl" onClose={() => setShowTambah(false)}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">{isEdit ? "Edit Jadwal Presentasi" : "Tambah Jadwal Presentasi"}</ModalHeader>
           <ModalBody className="px-6 py-4">
-            <form className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label>Siswa <span className="text-red-500">*</span></Label>
-                <Select name="siswa_id_siswa" value={form.siswa_id_siswa} onChange={handleChange} className="mt-1" disabled={isEdit}>
-                  <option value="">Pilih siswa...</option>
-                  {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas_siswa} {s.jurusan_siswa}</option>)}
-                </Select>
+            <form className="space-y-4">
+              {!isEdit && (
+                <div>
+                  <Label>Siswa <span className="text-red-500">*</span></Label>
+                  <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1">
+                    <option value="">Pilih siswa...</option>
+                    {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas} {s.jurusan}</option>)}
+                  </Select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tanggal <span className="text-red-500">*</span></Label>
+                  <TextInput type="date" name="tanggal_presentasi" value={form.tanggal_presentasi} onChange={handleChange} className="mt-1"/>
+                </div>
+                <div>
+                  <Label>Jam <span className="text-red-500">*</span></Label>
+                  <TextInput type="time" name="jam_presentasi" value={form.jam_presentasi} onChange={handleChange} className="mt-1"/>
+                </div>
               </div>
-              <div><Label>Tanggal <span className="text-red-500">*</span></Label><TextInput type="date" name="tanggal_presentasi" value={form.tanggal_presentasi} onChange={handleChange} className="mt-1"/></div>
-              <div><Label>Jam <span className="text-red-500">*</span></Label><TextInput type="time" name="jam_presentasi" value={form.jam_presentasi} onChange={handleChange} className="mt-1"/></div>
-              <div><Label>Ruangan <span className="text-red-500">*</span></Label><TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Contoh: Lab TKJ 1" className="mt-1"/></div>
+              <div>
+                <Label>Ruangan <span className="text-red-500">*</span></Label>
+                <TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Contoh: Lab TKJ 1 atau Aula" className="mt-1"/>
+              </div>
               <div>
                 <Label>Status <span className="text-red-500">*</span></Label>
                 <Select name="status_presentasi" value={form.status_presentasi} onChange={handleChange} className="mt-1">
@@ -282,25 +365,50 @@ export default function PresentasiPage() {
         </Modal>
 
         {/* Modal Detail */}
-        <Modal dismissible show={showDetail} size="4xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
-          <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Presentasi</ModalHeader>
+        <Modal dismissible show={showDetail} size="xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
+          <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Jadwal Presentasi</ModalHeader>
           <ModalBody className="px-6 py-4">
             {selected && (
-              <form className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div><Label>Nama Siswa</Label><TextInput value={selected.nama_siswa ?? "-"} readOnly className="mt-1"/></div>
-                  <div><Label>Tempat PKL</Label><TextInput value={selected.tempat_pkl ?? "-"} readOnly className="mt-1"/></div>
-                  <div><Label>Tanggal</Label><TextInput value={selected.tanggal ?? "-"} readOnly className="mt-1"/></div>
-                </div>
-                <div className="space-y-4">
-                  <div><Label>Jam</Label><TextInput value={selected.jam ?? "-"} readOnly className="mt-1"/></div>
-                  <div><Label>Ruangan</Label><TextInput value={selected.ruangan ?? "-"} readOnly className="mt-1"/></div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Status</Label>
-                    <div className="mt-2"><span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status)}`}>{statusLabel(selected.status)}</span></div>
+                    <Label>Nama Siswa</Label>
+                    <TextInput value={selected.nama_siswa ?? "-"} readOnly className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Kelas</Label>
+                    <TextInput value={selected.kelas_siswa ?? "-"} readOnly className="mt-1" />
                   </div>
                 </div>
-              </form>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tempat PKL</Label>
+                    <TextInput value={selected.tempat_pkl ?? "-"} readOnly className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <div className="mt-2">
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status)}`}>
+                        {statusLabel(selected.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tanggal</Label>
+                    <TextInput value={selected.tanggal ?? "-"} readOnly className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Jam</Label>
+                    <TextInput value={selected.jam ?? "-"} readOnly className="mt-1" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Ruangan</Label>
+                  <TextInput value={selected.ruangan ?? "-"} readOnly className="mt-1" />
+                </div>
+              </div>
             )}
           </ModalBody>
           <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">

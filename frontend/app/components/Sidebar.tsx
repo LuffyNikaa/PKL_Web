@@ -37,9 +37,9 @@ export default function Sidebar({ user }: { user: User }) {
   };
 
   return (
-    <aside className="w-64 h-screen bg-white flex flex-col justify-between sticky top-0 overflow-hidden">
-      <div>
-        {/* Profile */}
+    <aside className="w-64 h-screen bg-white flex flex-col sticky top-0">
+      {/* Profile Section - Fixed */}
+      <div className="flex-shrink-0">
         <Link
           href="/profile"
           className={`flex items-center gap-3 p-4 hover:bg-gray-50 transition rounded-lg mx-2 mt-2 ${pathname === "/profile" ? "bg-[#DBEAFE]" : ""}`}
@@ -51,7 +51,10 @@ export default function Sidebar({ user }: { user: User }) {
             <p className="text-xs text-blue-500 font-inter mt-0.5">Lihat Profil →</p>
           </div>
         </Link>
+      </div>
 
+      {/* Navigation Section - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
         <nav className="p-4 space-y-5 text-sm">
 
           {/* Dashboard */}
@@ -69,12 +72,16 @@ export default function Sidebar({ user }: { user: User }) {
             <div className="space-y-1">
               {role === "admin" && (
                 <>
-                  <MenuItem icon="/icons/logout.png" label="Data Guru"  href="/data-guru"  pathname={pathname} />
-                  <MenuItem icon="/icons/dudi.png"   label="Data DuDi"  href="/data-dudi"  pathname={pathname} />
+                  <MenuItem icon="/icons/logout.png" label="Data Guru"     href="/data-guru"    pathname={pathname} />
+                  <MenuItem icon="/icons/dudi.png"   label="Data DuDi"     href="/data-dudi"    pathname={pathname} />
+                  <MenuItem icon="/icons/periode.png" label="Data Periode"  href="/periode"      pathname={pathname} />
                 </>
               )}
               {(role === "admin" || role === "guru") && (
-                <MenuItem icon="/icons/logout.png" label="Data Siswa" href="/data-siswa" pathname={pathname} />
+                <>
+                  <MenuItem icon="/icons/logout.png" label="Data Siswa" href="/data-siswa" pathname={pathname} />
+                  <MenuItem icon="/icons/kelas.png" label="Data Kelas" href="/data-kelas" pathname={pathname} />
+                </>
               )}
             </div>
           </div>
@@ -82,6 +89,13 @@ export default function Sidebar({ user }: { user: User }) {
           {/* Manajemen Siswa */}
           <div>
             <p className="text-black text-xl font-bold mb-1 font-inter">Manajemen Siswa</p>
+            <div className="space-y-1">
+              {(role === "admin" || role === "guru") && (
+                <>
+                  <MenuItem icon="/icons/dudi.png" label="Penempatan" href="/penempatan" pathname={pathname} />
+                </>
+              )}
+            </div>
 
             {/* Administrasi */}
             <button onClick={() => setOpenAdmin(!openAdmin)} className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-gray-100">
@@ -118,8 +132,8 @@ export default function Sidebar({ user }: { user: User }) {
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="p-4">
+      {/* Logout Section - Fixed */}
+      <div className="flex-shrink-0 p-4">
         <button onClick={handleLogout} className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200">
           <span className="flex items-center gap-3 font-inter">
             <SidebarIcon src="/icons/logout.png" />

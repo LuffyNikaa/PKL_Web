@@ -5,6 +5,8 @@ use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\JurnalHarian;
 use App\Models\Presensi;
+use App\Models\Penempatan;
+use Carbon\Carbon;
 
 class JurnalHarianController extends Controller
 {
@@ -12,11 +14,28 @@ class JurnalHarianController extends Controller
     public function index(Request $request)
     {
         try {
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
-            if (!$siswa) return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
 
-            $query = JurnalHarian::where('id_siswa', $siswa->id_siswa)
+            // Cari penempatan aktif
+            $penempatan = Penempatan::where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 404);
+            }
+
+            // Query jurnal berdasarkan id_penempatan
+            $query = JurnalHarian::where('id_penempatan', $penempatan->id_penempatan)
                 ->orderBy('tanggal_jurnal_harian', 'desc');
 
             if ($request->filled('search')) {
@@ -24,22 +43,20 @@ class JurnalHarianController extends Controller
             }
 
             // Ambil absensi hari ini untuk cek bisa edit atau tidak
-            $absensiHariIni = Presensi::where('id_siswa', $siswa->id_siswa)
+            $absensiHariIni = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())
                 ->first();
 
             $sudahPulang = $absensiHariIni?->waktu_pulang !== null;
 
             $jurnal = $query->get()->map(function ($j) use ($sudahPulang) {
-                $isHariIni = $j->tanggal_jurnal_harian->isToday();
-                // Bisa edit jika: jurnal hari ini DAN belum absen pulang
-                $bisaEdit  = $isHariIni && !$sudahPulang;
+                $isHariIni = Carbon::parse($j->tanggal_jurnal_harian)->isToday();
+                $bisaEdit = $isHariIni && !$sudahPulang;
 
                 return [
                     'id_jurnal_harian' => $j->id_jurnal_harian,
-                    'tanggal'          => $j->tanggal_jurnal_harian->format('Y-m-d'),
-                    'tanggal_format'   => \Carbon\Carbon::parse($j->tanggal_jurnal_harian)
-                                            ->translatedFormat('l, j F Y'),
+                    'tanggal'          => Carbon::parse($j->tanggal_jurnal_harian)->format('Y-m-d'),
+                    'tanggal_format'   => Carbon::parse($j->tanggal_jurnal_harian)->translatedFormat('l, j F Y'),
                     'kegiatan'         => $j->kegiatan_jurnal_harian,
                     'bisa_edit'        => $bisaEdit,
                 ];
@@ -57,29 +74,34 @@ class JurnalHarianController extends Controller
     {
         try {
             $request->validate([
-                'tanggal_jurnal_harian'  => 'required|date',
                 'kegiatan_jurnal_harian' => 'required|string',
             ], [
-                'tanggal_jurnal_harian.required'  => 'Tanggal wajib diisi',
                 'kegiatan_jurnal_harian.required' => 'Kegiatan wajib diisi',
             ]);
 
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
 
-            if (!$siswa)          return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
-            if (!$siswa->id_dudi) return response()->json(['message' => 'Siswa belum memiliki DUDI'], 422);
-
-            // Cek hanya bisa tambah jurnal hari ini
-            $tanggalInput = \Carbon\Carbon::parse($request->tanggal_jurnal_harian)->toDateString();
-            if ($tanggalInput !== today()->toDateString()) {
-                return response()->json([
-                    'message' => 'Jurnal hanya bisa diisi untuk hari ini',
-                ], 422);
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
             }
 
-            // Cek sudah absen masuk hari ini
-            $absensi = Presensi::where('id_siswa', $siswa->id_siswa)
+            // Cari penempatan aktif
+            $penempatan = Penempatan::with('dudi', 'periode')
+                ->where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 422);
+            }
+
+            // Cek absensi hari ini
+            $absensi = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())
                 ->first();
 
@@ -87,7 +109,7 @@ class JurnalHarianController extends Controller
                 return response()->json(['message' => 'Absen masuk terlebih dahulu sebelum mengisi jurnal'], 422);
             }
 
-            // Cek belum absen pulang
+            // Cek sudah absen pulang
             if ($absensi->waktu_pulang) {
                 return response()->json(['message' => 'Tidak bisa mengisi jurnal setelah absen pulang'], 422);
             }
@@ -98,7 +120,7 @@ class JurnalHarianController extends Controller
             }
 
             // 1 hari hanya 1 jurnal
-            $already = JurnalHarian::where('id_siswa', $siswa->id_siswa)
+            $already = JurnalHarian::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_jurnal_harian', today())
                 ->first();
 
@@ -108,12 +130,11 @@ class JurnalHarianController extends Controller
                 ], 400);
             }
 
+            // Create jurnal dengan id_penempatan
             JurnalHarian::create([
-                'id_siswa'               => $siswa->id_siswa,
-                'id_user'                => $user->id_users,
-                'id_dudi'                => $siswa->id_dudi,
-                'tanggal_jurnal_harian'  => today()->toDateString(),
-                'kegiatan_jurnal_harian' => $request->kegiatan_jurnal_harian,
+                'id_penempatan'              => $penempatan->id_penempatan,
+                'tanggal_jurnal_harian'      => today()->toDateString(),
+                'kegiatan_jurnal_harian'     => $request->kegiatan_jurnal_harian,
             ]);
 
             return response()->json(['message' => 'Jurnal berhasil ditambahkan']);
@@ -126,7 +147,7 @@ class JurnalHarianController extends Controller
     }
 
     // PUT /api/mobile/jurnal-harian/{id}
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         try {
             $request->validate([
@@ -135,21 +156,42 @@ class JurnalHarianController extends Controller
                 'kegiatan_jurnal_harian.required' => 'Kegiatan wajib diisi',
             ]);
 
-            $user   = $request->user();
-            $siswa  = Siswa::where('id_user', $user->id_users)->first();
-            $jurnal = JurnalHarian::where('id_jurnal_harian', $id)
-                ->where('id_siswa', $siswa->id_siswa)
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
+
+            // Cari penempatan aktif
+            $penempatan = Penempatan::where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
                 ->first();
 
-            if (!$jurnal) return response()->json(['message' => 'Jurnal tidak ditemukan'], 404);
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 404);
+            }
+
+            // Cari jurnal
+            $jurnal = JurnalHarian::where('id_jurnal_harian', $id)
+                ->where('id_penempatan', $penempatan->id_penempatan)
+                ->first();
+
+            if (!$jurnal) {
+                return response()->json(['message' => 'Jurnal tidak ditemukan'], 404);
+            }
 
             // Cek jurnal harus hari ini
-            if (!$jurnal->tanggal_jurnal_harian->isToday()) {
+            if (!Carbon::parse($jurnal->tanggal_jurnal_harian)->isToday()) {
                 return response()->json(['message' => 'Jurnal hanya bisa diedit di hari yang sama'], 422);
             }
 
-            // Cek belum absen pulang
-            $absensi = Presensi::where('id_siswa', $siswa->id_siswa)
+            // Cek sudah absen pulang
+            $absensi = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())
                 ->first();
 

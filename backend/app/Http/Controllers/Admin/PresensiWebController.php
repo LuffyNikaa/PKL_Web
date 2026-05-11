@@ -9,7 +9,17 @@ class PresensiWebController extends Controller
     // GET /api/admin/presensi
     public function index(Request $request)
     {
-        $query = Presensi::with(['siswa', 'siswa.dudi']);
+        // Load presensi dengan relasi penempatan > siswa > kelas > jurusan & penempatan > dudi
+        $query = Presensi::with([
+            'penempatan' => function ($q) {
+                $q->with([
+                    'siswa' => function ($q2) {
+                        $q2->with('kelas.jurusan');
+                    },
+                    'dudi'
+                ]);
+            }
+        ]);
 
         // Filter status
         if ($request->filled('status')) {
@@ -23,7 +33,7 @@ class PresensiWebController extends Controller
 
         // Filter nama siswa
         if ($request->filled('nama')) {
-            $query->whereHas('siswa', function ($q) use ($request) {
+            $query->whereHas('penempatan.siswa', function ($q) use ($request) {
                 $q->where('nama_siswa', 'like', '%' . $request->nama . '%');
             });
         }
@@ -32,10 +42,13 @@ class PresensiWebController extends Controller
 
         return response()->json([
             'data' => $presensi->map(function ($p) {
+                $siswa = $p->penempatan?->siswa;
+                $dudi = $p->penempatan?->dudi;
+                
                 return [
                     'id_absensi'        => $p->id_absensi,
-                    'nama'              => $p->siswa?->nama_siswa,
-                    'tempat_pkl'        => $p->siswa?->dudi?->nama_dudi,
+                    'nama'              => $siswa?->nama_siswa,
+                    'tempat_pkl'        => $dudi?->nama_dudi,
                     'tanggal_absensi'   => $p->tanggal_absensi?->format('d-m-Y'),
                     'waktu_absensi'     => $p->waktu_absensi,
                     'waktu_pulang'      => $p->waktu_pulang,

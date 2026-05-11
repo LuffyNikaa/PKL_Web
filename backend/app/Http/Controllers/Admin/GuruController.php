@@ -23,7 +23,8 @@ class GuruController extends Controller
 
             // akun login guru
             'email_users' => 'required|email|unique:users,email_users',
-            'password'    => 'required|min:6'
+            'password'    => 'required|min:6',
+            'status_users' => 'required|in:aktif,nonaktif',
         ]);
 
         DB::beginTransaction();
@@ -34,7 +35,8 @@ class GuruController extends Controller
                 'nama_users'     => $request->nama_guru,
                 'email_users'    => $request->email_users,
                 'password_users' => Hash::make($request->password),
-                'role_users'     => 'guru'
+                'role_users'     => 'guru',
+                'status_users'   => $request->status_users,
             ]);
 
             // 2️⃣ BUAT DATA GURU
@@ -45,7 +47,8 @@ class GuruController extends Controller
                 'mapel_guru'  => $request->mapel_guru,
                 'jk_guru'     => $request->jk_guru,
                 'alamat_guru' => $request->alamat_guru,
-                'no_guru'     => $request->no_guru
+                'no_guru'     => $request->no_guru,
+
             ]);
 
             DB::commit();
@@ -66,13 +69,13 @@ class GuruController extends Controller
 
     public function index()
     {
-        $gurus = Guru::all();
+        $gurus = Guru::with('user')->get();
         return response()->json([
             'data' => $gurus
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $guru = Guru::find($id);
         if (!$guru) {
@@ -97,14 +100,16 @@ class GuruController extends Controller
                 'mapel_guru'  => $request->mapel_guru,
                 'jk_guru'     => $request->jk_guru,
                 'alamat_guru' => $request->alamat_guru,
-                'no_guru'     => $request->no_guru
+                'no_guru'     => $request->no_guru,
+
             ]);
 
             // Optional: update nama di users agar sama
             $user = Users::find($guru->id_users);
-            if ($user) {
-                $user->update(['nama_users' => $request->nama_guru]);
-            }
+            $user->update([
+                'nama_users'   => $request->nama_guru,
+                'status_users' => $request->status_users,
+            ]);
 
             DB::commit();
             return response()->json(['message' => 'Guru berhasil diperbarui'], 200);
@@ -117,7 +122,7 @@ class GuruController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $guru = Guru::find($id);
         if (!$guru) {

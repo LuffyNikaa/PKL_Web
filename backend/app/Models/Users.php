@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -20,25 +19,34 @@ class Users extends Model
         'email_users',
         'password_users',
         'role_users',
+        'status_users'
     ];
 
+    // 🔒 Sembunyikan password
     protected $hidden = [
-        'password_users',
+        'password_users'
     ];
 
-    /**
-     * PENTING: override kolom password
-     */
-    public function getAuthPassword()
+    // 🔐 Auto hash password (Laravel 10+)
+    protected $casts = [
+        'password_users' => 'hashed'
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATION
+    |--------------------------------------------------------------------------
+    */
+
+    // 1 user punya 1 siswa
+    public function siswa()
     {
-        return $this->password_users;
+        return $this->hasOne(Siswa::class, 'id_users', 'id_users');
     }
 
-    /**
-     * PENTING: override kolom email untuk Auth::attempt
-     */
-    public function getAuthIdentifierName()
+    // 1 user punya 1 guru
+    public function guru()
     {
-        return 'email_users';
+        return $this->hasOne(Guru::class, 'id_users', 'id_users');
     }
 }

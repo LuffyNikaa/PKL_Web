@@ -1,14 +1,19 @@
 <?php
+
 namespace App\Http\Controllers\API\Mobile;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Presensi;
-use App\Models\JurnalHarian; // ✅ tambahan
+use App\Models\JurnalHarian;
+use App\Models\Penempatan;
+use App\Models\Periode;
+use Carbon\Carbon;
 
 class PresensiController extends Controller
 {
-    private function hitungJarak($lat1, $lon1, $lat2, $lon2): float
+    private function hitungJarak(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
         $R    = 6371000;
         $phi1 = deg2rad($lat1);
@@ -23,16 +28,38 @@ class PresensiController extends Controller
     public function status(Request $request)
     {
         try {
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
-            if (!$siswa) return response()->json(['status' => 'belum']);
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['status' => 'belum']);
+            }
 
-            $absensi = Presensi::where('id_siswa', $siswa->id_siswa)
+            // ✅ Cari penempatan aktif dengan join ke periode
+            $penempatan = Penempatan::with(['periode'])
+                ->where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['status' => 'belum', 'message' => 'Belum memiliki penempatan aktif']);
+            }
+
+            $absensi = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())->first();
 
-            if (!$absensi)              return response()->json(['status' => 'belum']);
-            if ($absensi->waktu_pulang) return response()->json(['status' => 'sudah_pulang']);
+            if (!$absensi) {
+                return response()->json(['status' => 'belum']);
+            }
+            if ($absensi->waktu_pulang) {
+                return response()->json(['status' => 'sudah_pulang']);
+            }
             return response()->json(['status' => 'sudah_masuk']);
+            
         } catch (\Exception $e) {
             return response()->json(['status' => 'belum', 'error' => $e->getMessage()]);
         }
@@ -48,30 +75,40 @@ class PresensiController extends Controller
                 'longitude_absensi' => 'required|numeric',
                 'alasan_absensi'    => 'required_if:status_absensi,izin,sakit|nullable|string',
                 'foto_surat'        => 'required_if:status_absensi,izin,sakit|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            ], [
-                'alasan_absensi.required_if' => 'Alasan wajib diisi untuk izin atau sakit',
-                'foto_surat.required_if'     => 'Foto/surat keterangan wajib dilampirkan',
-                'foto_surat.mimes'           => 'File harus berformat JPG, PNG, atau PDF',
-                'foto_surat.max'             => 'Ukuran file maksimal 2MB',
             ]);
 
-            $user  = $request->user();
-            $siswa = Siswa::with('dudi')->where('id_user', $user->id_users)->first();
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
 
-            if (!$siswa)          return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
-            if (!$siswa->id_dudi) return response()->json(['message' => 'Siswa belum memiliki DUDI'], 422);
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
+
+            // ✅ Cari penempatan aktif dengan join ke periode
+            $penempatan = Penempatan::with(['dudi', 'periode'])
+                ->where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['message' => 'Siswa belum memiliki penempatan aktif'], 422);
+            }
 
             // Validasi radius hanya untuk hadir
             if ($request->status_absensi === 'hadir') {
-                $dudi = $siswa->dudi;
+                $dudi = $penempatan->dudi;
                 if (!$dudi || !$dudi->latitude_dudi || !$dudi->longitude_dudi) {
                     return response()->json(['message' => 'Koordinat DUDI belum diatur oleh admin'], 422);
                 }
                 $jarak = $this->hitungJarak(
-                    $request->latitude_absensi,
-                    $request->longitude_absensi,
-                    $dudi->latitude_dudi,
-                    $dudi->longitude_dudi
+                    (float) $request->latitude_absensi,
+                    (float) $request->longitude_absensi,
+                    (float) $dudi->latitude_dudi,
+                    (float) $dudi->longitude_dudi
                 );
                 if ($jarak > 100) {
                     return response()->json([
@@ -81,9 +118,13 @@ class PresensiController extends Controller
                 }
             }
 
-            $already = Presensi::where('id_siswa', $siswa->id_siswa)
+            // Cek absensi hari ini
+            $already = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())->first();
-            if ($already) return response()->json(['message' => 'Anda sudah melakukan absensi hari ini'], 400);
+
+            if ($already) {
+                return response()->json(['message' => 'Anda sudah melakukan absensi hari ini'], 400);
+            }
 
             // Upload foto surat jika ada
             $fotoPath = null;
@@ -92,27 +133,24 @@ class PresensiController extends Controller
             }
 
             Presensi::create([
-                'id_siswa'          => $siswa->id_siswa,
-                'id_user'           => $user->id_users,
-                'id_dudi'           => $siswa->id_dudi,
+                'id_penempatan'     => $penempatan->id_penempatan,
                 'tanggal_absensi'   => today()->toDateString(),
                 'waktu_absensi'     => now()->format('H:i:s'),
+                'waktu_pulang'      => null,
                 'latitude_absensi'  => $request->latitude_absensi,
                 'longitude_absensi' => $request->longitude_absensi,
                 'status_absensi'    => $request->status_absensi,
-                'alasan_absensi'    => $request->alasan_absensi,
-                'foto_surat'        => $fotoPath,
+                'alasan_absensi'    => $request->alasan_absensi, null,
+                'foto_surat'        => $fotoPath, null,
             ]);
 
-            // ✅ Auto buat jurnal untuk izin/sakit
+            // Auto buat jurnal untuk izin/sakit
             if (in_array($request->status_absensi, ['izin', 'sakit'])) {
                 $keterangan = $request->status_absensi === 'izin' ? 'Izin' : 'Sakit';
-                $alasan     = $request->alasan_absensi ? " - {$request->alasan_absensi}" : '';
+                $alasan = $request->alasan_absensi ? " - {$request->alasan_absensi}" : '';
 
                 JurnalHarian::create([
-                    'id_siswa'               => $siswa->id_siswa,
-                    'id_user'                => $user->id_users,
-                    'id_dudi'                => $siswa->id_dudi,
+                    'id_penempatan'          => $penempatan->id_penempatan,
                     'tanggal_jurnal_harian'  => today()->toDateString(),
                     'kegiatan_jurnal_harian' => $keterangan . $alasan,
                 ]);
@@ -131,19 +169,39 @@ class PresensiController extends Controller
     public function pulang(Request $request)
     {
         try {
-            $user  = $request->user();
-            $siswa = Siswa::where('id_user', $user->id_users)->first();
-            if (!$siswa) return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            $user = $request->user();
+            $siswa = Siswa::where('id_users', $user->id_users)->first();
+            
+            if (!$siswa) {
+                return response()->json(['message' => 'Siswa tidak ditemukan'], 404);
+            }
 
-            $absensi = Presensi::where('id_siswa', $siswa->id_siswa)
+            // ✅ Cari penempatan aktif dengan join ke periode
+            $penempatan = Penempatan::where('id_siswa', $siswa->id_siswa)
+                ->whereHas('periode', function($q) {
+                    $q->where('tanggal_mulai', '<=', Carbon::today())
+                      ->where('tanggal_selesai', '>=', Carbon::today())
+                      ->where('status_periode', 'aktif');
+                })
+                ->first();
+
+            if (!$penempatan) {
+                return response()->json(['message' => 'Tidak ada penempatan aktif'], 404);
+            }
+
+            $absensi = Presensi::where('id_penempatan', $penempatan->id_penempatan)
                 ->whereDate('tanggal_absensi', today())->first();
 
-            if (!$absensi)              return response()->json(['message' => 'Belum absen masuk hari ini'], 400);
-            if ($absensi->waktu_pulang) return response()->json(['message' => 'Sudah absen pulang hari ini'], 400);
+            if (!$absensi) {
+                return response()->json(['message' => 'Belum absen masuk hari ini'], 400);
+            }
+            if ($absensi->waktu_pulang) {
+                return response()->json(['message' => 'Sudah absen pulang hari ini'], 400);
+            }
 
-            // ✅ Cek jurnal — hanya untuk status hadir, izin/sakit tidak wajib
+            // Cek jurnal untuk status hadir
             if ($absensi->status_absensi === 'hadir') {
-                $jurnal = JurnalHarian::where('id_siswa', $siswa->id_siswa)
+                $jurnal = JurnalHarian::where('id_penempatan', $penempatan->id_penempatan)
                     ->whereDate('tanggal_jurnal_harian', today())
                     ->first();
 
@@ -154,7 +212,10 @@ class PresensiController extends Controller
                 }
             }
 
-            $absensi->update(['waktu_pulang' => now()->format('H:i:s')]);
+            $absensi->update([
+                'waktu_pulang' => now()->format('H:i:s'),
+            ]);
+
             return response()->json(['message' => 'Absensi pulang berhasil']);
 
         } catch (\Exception $e) {

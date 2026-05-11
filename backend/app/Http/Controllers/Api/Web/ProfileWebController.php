@@ -13,9 +13,10 @@ class ProfileWebController extends Controller
         try {
             $user = $request->user();
             $base = [
-                'nama'  => $user->nama_users,
-                'email' => $user->email_users,
-                'role'  => $user->role_users,
+                'nama'   => $user->nama_users,
+                'email'  => $user->email_users,
+                'role'   => $user->role_users,
+                'status' => $user->status_users,
             ];
 
             if ($user->role_users === 'guru') {

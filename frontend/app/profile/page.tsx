@@ -10,6 +10,7 @@ type ProfileData = {
   nama: string;
   email: string;
   role: string;
+  status: string;
   nip?: string;
   mapel?: string;
   jk?: string;
@@ -36,6 +37,22 @@ function roleBadgeColor(role: string) {
     case "admin": return "bg-purple-100 text-purple-700";
     case "guru":  return "bg-blue-100 text-blue-700";
     default:      return "bg-gray-100 text-gray-600";
+  }
+}
+
+function statusBadgeColor(status: string) {
+  switch (status) {
+    case "aktif":   return "bg-green-100 text-green-700";
+    case "nonaktif": return "bg-red-100 text-red-700";
+    default:        return "bg-gray-100 text-gray-600";
+  }
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "aktif":   return "Aktif";
+    case "nonaktif": return "Nonaktif";
+    default:        return status;
   }
 }
 
@@ -159,9 +176,14 @@ export default function ProfilePage() {
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 font-inter">{profile.nama}</h2>
                     <p className="text-sm text-gray-500 font-inter mt-0.5">{profile.email}</p>
-                    <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${roleBadgeColor(profile.role)}`}>
-                      {roleLabel(profile.role)}
-                    </span>
+                    <div className="flex gap-2 mt-2">
+                      <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${roleBadgeColor(profile.role)}`}>
+                        {roleLabel(profile.role)}
+                      </span>
+                      <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${statusBadgeColor(profile.status)}`}>
+                        {statusLabel(profile.status)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -184,6 +206,7 @@ export default function ProfilePage() {
                     <Field label="Nama Lengkap" value={profile.nama} />
                     <Field label="Email" value={profile.email} />
                     <Field label="Role" value={roleLabel(profile.role)} />
+                    <Field label="Status" value={statusLabel(profile.status)} />
                   </div>
                 </div>
               )}
@@ -198,6 +221,8 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Nama Lengkap" value={profile.nama} />
                       <Field label="Email" value={profile.email} />
+                      <Field label="Role" value={roleLabel(profile.role)} />
+                      <Field label="Status" value={statusLabel(profile.status)} />
                     </div>
                   </div>
 
@@ -244,11 +269,10 @@ export default function ProfilePage() {
                   className="mt-1"
                 />
               </div>
-              {/* Email & password tidak bisa diedit */}
               <div>
-                <Label>Email</Label>
-                <TextInput value={profile.email} readOnly className="mt-1 bg-gray-50" />
-                <p className="text-xs text-gray-400 mt-1">Email tidak dapat diubah</p>
+                <Label>Status Akun</Label>
+                <TextInput value={statusLabel(profile.status)} readOnly className="mt-1 bg-gray-50" />
+                <p className="text-xs text-gray-400 mt-1">Status akun tidak dapat diubah melalui profil</p>
               </div>
             </div>
           )}
@@ -263,6 +287,11 @@ export default function ProfilePage() {
                 <Label>Email</Label>
                 <TextInput value={profile.email} readOnly className="mt-1 bg-gray-50" />
                 <p className="text-xs text-gray-400 mt-1">Email tidak dapat diubah</p>
+              </div>
+              <div>
+                <Label>Status Akun</Label>
+                <TextInput value={statusLabel(profile.status)} readOnly className="mt-1 bg-gray-50" />
+                <p className="text-xs text-gray-400 mt-1">Status akun tidak dapat diubah melalui profil</p>
               </div>
               <div>
                 <Label htmlFor="nip">NIP</Label>
