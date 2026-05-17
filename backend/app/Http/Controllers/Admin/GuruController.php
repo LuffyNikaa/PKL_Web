@@ -89,6 +89,8 @@ class GuruController extends Controller
             'jk_guru'     => 'required|in:laki-laki,perempuan',
             'alamat_guru' => 'required',
             'no_guru'     => 'required|max:30',
+            'email_users' => 'nullable|email|unique:users,email_users,' . $guru->id_users . ',id_users',
+            'status_users' => 'nullable|in:aktif,nonaktif',
         ]);
 
         DB::beginTransaction();
@@ -104,14 +106,19 @@ class GuruController extends Controller
 
             ]);
 
-            // Optional: update nama di users agar sama
+            // Update data user terkait (nama, email, status)
             $user = Users::find($guru->id_users);
-            $user->update([
+            $updateUser = [
                 'nama_users'   => $request->nama_guru,
-                'status_users' => $request->status_users,
-            ]);
+                'status_users' => $request->status_users ?? $user->status_users,
+            ];
+            if ($request->filled('email_users')) {
+                $updateUser['email_users'] = $request->email_users;
+            }
+            $user->update($updateUser);
 
             DB::commit();
+
             return response()->json(['message' => 'Guru berhasil diperbarui'], 200);
         } catch (\Exception $e) {
             DB::rollBack();

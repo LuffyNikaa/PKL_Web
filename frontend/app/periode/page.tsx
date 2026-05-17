@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import PageHeader from "../components/PageHeader";
+import SearchFilter from "../components/SearchFilter";
+import Toast, { ToastItem } from "../components/Toast";
 import {
   Modal,
   Button,
@@ -48,6 +50,17 @@ export default function PeriodePage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [form, setForm] = useState(emptyForm);
+
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const pushToast = (type: ToastItem["type"], message: string, duration = 3500) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    setToasts((s) => [...s, { id, type, message, duration }]);
+  };
+  const removeToast = (id: string) => setToasts((s) => s.filter((t) => t.id !== id));
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -98,7 +111,6 @@ export default function PeriodePage() {
 
   const handleDeletePeriode = async () => {
     if (!selectedPeriode) return;
-    if (!confirm(`Hapus periode ${selectedPeriode.nama_periode}?`)) return;
 
     try {
       const token = localStorage.getItem("token");
@@ -116,10 +128,12 @@ export default function PeriodePage() {
       if (!res.ok) throw new Error(json.message || "Gagal menghapus periode");
 
       await fetchPeriode();
+      setShowConfirmDelete(false);
       setShowDetailModal(false);
       setSelectedPeriode(null);
+      pushToast("success", "Periode berhasil dihapus");
     } catch (err: any) {
-      alert(err.message);
+      pushToast("error", err.message || "Gagal menghapus periode");
     }
   };
 
@@ -143,8 +157,9 @@ export default function PeriodePage() {
       await fetchPeriode();
       setShowModal(false);
       setForm(emptyForm);
+      pushToast("success", "Periode berhasil ditambahkan");
     } catch (err: any) {
-      alert(err.message);
+      pushToast("error", err.message || "Gagal menambahkan periode");
     }
   };
 
@@ -174,14 +189,25 @@ export default function PeriodePage() {
       setShowDetailModal(false);
       setSelectedPeriode(null);
       setIsEditMode(false);
+      pushToast("success", "Periode berhasil diperbarui");
     } catch (err: any) {
-      alert(err.message);
+      pushToast("error", err.message || "Gagal memperbarui periode");
     }
   };
 
-  const totalPages = Math.ceil(periodeList.length / DATA_PER_PAGE);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredData = periodeList.filter((p) => {
+    const matchSearch =
+      !normalizedSearch ||
+      (p.nama_periode || "").toLowerCase().includes(normalizedSearch);
+    const matchStatus =
+      filterStatus === "all" || p.status_periode === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const totalPages = Math.ceil(filteredData.length / DATA_PER_PAGE);
   const start = (page - 1) * DATA_PER_PAGE;
-  const currentData = periodeList.slice(start, start + DATA_PER_PAGE);
+  const currentData = filteredData.slice(start, start + DATA_PER_PAGE);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   if (!user) return null;
@@ -210,6 +236,22 @@ export default function PeriodePage() {
             >
               Tambah <span className="text-lg">+</span>
             </button>
+
+            {/* Search & Filter */}
+            <div className="mb-4">
+              <SearchFilter
+                search={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                filter={filterStatus}
+                onFilterChange={(v) => { setFilterStatus(v); setPage(1); }}
+                placeholder="Cari nama periode..."
+                filterOptions={[
+                  { value: "all", label: "Semua Status" },
+                  { value: "aktif", label: "Aktif" },
+                  { value: "selesai", label: "Selesai" },
+                ]}
+              />
+            </div>
 
             {/* TABLE */}
             <div className="overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
@@ -300,6 +342,8 @@ export default function PeriodePage() {
         </div>
       </main>
 
+      <Toast items={toasts} onRemove={removeToast} />
+
       {/* MODAL TAMBAH PERIODE */}
       <Modal dismissible show={showModal} size="md" onClose={() => setShowModal(false)}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Periode</ModalHeader>
@@ -312,7 +356,7 @@ export default function PeriodePage() {
                 name="nama_periode"
                 value={form.nama_periode}
                 onChange={handleFormChange}
-                placeholder="Contoh: 2026/2027"
+                placeholder="Masukkan nama periode"
                 required
               />
             </div>
@@ -353,10 +397,12 @@ export default function PeriodePage() {
           </form>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowModal(false)}>
+          <Button onClick={handleSimpanPeriode} color="blue">
+            Simpan
+          </Button>
+          <Button color="red" onClick={() => setShowModal(false)}>
             Batal
           </Button>
-          <Button onClick={handleSimpanPeriode}>Tambah</Button>
         </ModalFooter>
       </Modal>
 
@@ -374,7 +420,7 @@ export default function PeriodePage() {
                 name="nama_periode"
                 value={form.nama_periode}
                 onChange={handleFormChange}
-                placeholder="Contoh: 2026/2027"
+                placeholder="Masukkan nama periode"
                 disabled={!isEditMode}
                 required
               />
@@ -419,28 +465,58 @@ export default function PeriodePage() {
           </form>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <div className="flex gap-2">
-            {!isEditMode && (
-              <>
-                <Button color="warning" onClick={handleEditPeriode}>
-                  Edit
-                </Button>
-                <Button color="failure" onClick={handleDeletePeriode}>
-                  Hapus
-                </Button>
-              </>
-            )}
-            {isEditMode && (
-              <>
-                <Button color="gray" onClick={() => setIsEditMode(false)}>
-                  Batal
-                </Button>
-                <Button onClick={handleUpdatePeriode}>Simpan</Button>
-              </>
-            )}
+          {!isEditMode ? (
+            <>
+              <Button color="blue" onClick={handleEditPeriode}>
+                Edit
+              </Button>
+              <Button color="red" onClick={() => setShowConfirmDelete(true)}>
+                Hapus
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button color="blue" onClick={handleUpdatePeriode}>
+                Simpan
+              </Button>
+              <Button color="red" onClick={() => setIsEditMode(false)}>
+                Batal
+              </Button>
+            </>
+          )}
+        </ModalFooter>
+      </Modal>
+
+      {/* MODAL KONFIRMASI HAPUS */}
+      <Modal
+        dismissible
+        show={showConfirmDelete}
+        size="sm"
+        onClose={() => setShowConfirmDelete(false)}
+      >
+        <ModalHeader className="px-6 py-4 border-b border-gray-200">
+          Konfirmasi Hapus
+        </ModalHeader>
+        <ModalBody className="px-6 py-4">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-700 font-inter">
+              Apakah Anda yakin ingin menghapus periode{" "}
+              <span className="font-semibold text-gray-900">{selectedPeriode?.nama_periode}</span>?
+            </p>
+            <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
           </div>
-          <Button color="gray" onClick={() => setShowDetailModal(false)}>
-            Tutup
+        </ModalBody>
+        <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
+          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>
+            Batal
+          </Button>
+          <Button color="red" onClick={handleDeletePeriode}>
+            Ya, Hapus
           </Button>
         </ModalFooter>
       </Modal>

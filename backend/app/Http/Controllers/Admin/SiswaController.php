@@ -153,6 +153,7 @@ class SiswaController extends Controller
             'id_kelas'     => 'required|exists:kelas,id_kelas',
             'alamat_siswa' => 'required|string',
             'no_siswa'     => 'required|string|max:15',
+            'nis_siswa'    => 'required|string|max:20|unique:siswa,nis_siswa,' . $id . ',id_siswa',
         ]);
 
         if ($validator->fails()) {
@@ -171,6 +172,7 @@ class SiswaController extends Controller
                 'jk_siswa'     => $request->jk_siswa,
                 'alamat_siswa' => $request->alamat_siswa,
                 'no_siswa'     => $request->no_siswa,
+                'nis_siswa'    => $request->nis_siswa,
             ]);
 
             $user = Users::find($siswa->id_users);

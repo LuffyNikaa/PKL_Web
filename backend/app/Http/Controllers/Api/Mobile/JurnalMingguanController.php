@@ -218,7 +218,7 @@ class JurnalMingguanController extends Controller
             }
 
             // Update kegiatan
-            $data = ['kegiatan_jurnal_harian' => $request->kegiatan_jurnal_mingguan];
+            $data = ['kegiatan_jurnal_mingguan' => $request->kegiatan_jurnal_mingguan];
 
             // Handle upload file jika ada
             if ($request->hasFile('dokumentasi_jurnal_mingguan')) {

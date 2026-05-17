@@ -1,7 +1,7 @@
 "use client"
 
 import { MapContainer, TileLayer, Marker, Popup, useMapEvent, useMap } from 'react-leaflet';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -17,13 +17,22 @@ const MapComponent = ({
   isEditing: boolean;
   isAddMode: boolean;
 }) => {
-  const [position, setPosition] = useState<[number, number]>([0, 0]);
-  const [zoom, setZoom] = useState(10); // Menyimpan zoom level
-  
-  // Update posisi jika latLng berubah
+  // Gunakan nilai awal sebagai ref sehingga MapContainer tidak di-reset saat state berubah
+  const initialCenter = useRef<[number, number]>(latLng || [-7.250445, 112.768845]);
+  const initialZoom = useRef<number>(10);
+
+  const [position, setPosition] = useState<[number, number]>(initialCenter.current);
+  const [zoom, setZoom] = useState<number>(initialZoom.current);
+
+  // Hanya update posisi internal jika prop latLng benar-benar berubah
+  const prevLatLng = useRef<[number, number] | null>(null);
   useEffect(() => {
-    if (latLng) {
-      setPosition(latLng); // Set new position based on latLng prop
+    if (!latLng) return;
+    const [lat, lng] = latLng;
+    const prev = prevLatLng.current;
+    if (!prev || prev[0] !== lat || prev[1] !== lng) {
+      setPosition(latLng);
+      prevLatLng.current = latLng;
     }
   }, [latLng]);
 
@@ -33,9 +42,10 @@ const MapComponent = ({
 
     useEffect(() => {
       if (position) {
-        map.setView(position, zoom); // Set the map center and zoom level
+        // Pan to the new position to preserve current zoom and avoid full reload
+        map.panTo(position);
       }
-    }, [position, map, zoom]);
+    }, [position, map]);
 
     // Event listener untuk geser peta (dragging)
     useMapEvent('drag', () => {
@@ -68,11 +78,42 @@ const MapComponent = ({
       setZoom(map.getZoom()); // Simpan zoom level saat zoom diubah
     });
 
+    // Simpan state peta (center + zoom) setelah interaksi selesai, untuk restore jika peta ter-mount ulang
+    useMapEvent('moveend', () => {
+      try {
+        const c = map.getCenter();
+        const z = map.getZoom();
+        const state = { center: [c.lat, c.lng], zoom: z };
+        sessionStorage.setItem('map_state_dudi', JSON.stringify(state));
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    // Saat komponen peta pertama kali di-mount, restore view dari sessionStorage jika ada
+    useEffect(() => {
+      try {
+        const raw = sessionStorage.getItem('map_state_dudi');
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s && Array.isArray(s.center) && typeof s.zoom === 'number') {
+            map.setView(s.center, s.zoom);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Inline SVG marker untuk menghindari permintaan CDN (tracking prevention)
+    const svg = encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='30' height='42' viewBox='0 0 30 42'><path d='M15 0 C9 0 4 5 4 11 C4 23 15 42 15 42 C15 42 26 23 26 11 C26 5 21 0 15 0 Z' fill='%232563EB'/><circle cx='15' cy='11' r='4' fill='white'/></svg>");
+    const iconUrl = `data:image/svg+xml;charset=UTF-8,${svg}`;
     const customIcon = new L.Icon({
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png', // Ganti dengan URL gambar ikon kustom
-      iconSize: [25, 41], // Ukuran ikon
-      iconAnchor: [12, 41], // Anchor titik ikon (di mana peta berhubungan dengan marker)
-      popupAnchor: [1, -34], // Anchor popup jika ada
+      iconUrl,
+      iconSize: [30, 42],
+      iconAnchor: [15, 42],
+      popupAnchor: [1, -34],
     });
     
     return position === null ? null : (
@@ -85,7 +126,7 @@ const MapComponent = ({
   };
 
   return (
-    <MapContainer center={position} zoom={zoom} style={{ height: '70%', width: '100%' }}>
+    <MapContainer center={initialCenter.current} zoom={initialZoom.current} style={{ height: '70%', width: '100%' }}>
       <TileLayer 
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

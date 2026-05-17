@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar";
 import PageHeader from "../components/PageHeader";
 import { Button, Label, TextInput, Select, Textarea, Modal, ModalHeader, ModalBody, ModalFooter } from "flowbite-react";
 import Image from "next/image";
+import Toast, { ToastItem } from "../components/Toast";
 
 type ProfileData = {
   nama: string;
@@ -74,6 +75,15 @@ export default function ProfilePage() {
   const [showEdit, setShowEdit] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [form, setForm]         = useState<Partial<ProfileData>>({});
+  const [toasts, setToasts]     = useState<ToastItem[]>([]);
+
+  const pushToast = (type: ToastItem['type'], message: string, duration = 3500) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const t: ToastItem = { id, type, message, duration };
+    setToasts((s) => [...s, t]);
+  };
+
+  const removeToast = (id: string) => setToasts((s) => s.filter((t) => t.id !== id));
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -134,15 +144,22 @@ export default function ProfilePage() {
 
       await fetchProfile();
       setShowEdit(false);
+      pushToast('success', 'Profil berhasil diperbarui');
     } catch (err: any) {
-      alert(err.message || "Terjadi kesalahan");
+      pushToast('error', err.message || "Terjadi kesalahan");
     } finally {
       setSaving(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const name = e.target.name;
+    let value = e.target.value;
+    // Untuk field numeric seperti nip dan no_hp, hanya simpan digit
+    if (name === 'nip' || name === 'no_hp') {
+      value = value.replace(/\D/g, '');
+    }
+    setForm({ ...form, [name]: value });
   };
 
   if (!user) return null;
@@ -251,6 +268,8 @@ export default function ProfilePage() {
         </div>
       </main>
 
+      <Toast items={toasts} onRemove={removeToast} />
+
       {/* ===== MODAL EDIT ===== */}
       <Modal dismissible show={showEdit} size="lg" onClose={() => setShowEdit(false)}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">
@@ -269,34 +288,23 @@ export default function ProfilePage() {
                   className="mt-1"
                 />
               </div>
-              <div>
-                <Label>Status Akun</Label>
-                <TextInput value={statusLabel(profile.status)} readOnly className="mt-1 bg-gray-50" />
-                <p className="text-xs text-gray-400 mt-1">Status akun tidak dapat diubah melalui profil</p>
-              </div>
+              {/* Status dihapus dari form edit karena hanya bisa diubah oleh admin */}
             </div>
           )}
 
           {profile?.role === "guru" && (
             <form className="grid grid-cols-2 gap-4">
+              {/* Left column (2): Nama, Mata Pelajaran */}
               <div>
                 <Label htmlFor="nama">Nama Lengkap</Label>
                 <TextInput id="nama" name="nama" value={form.nama ?? ""} onChange={handleChange} className="mt-1" />
               </div>
               <div>
-                <Label>Email</Label>
-                <TextInput value={profile.email} readOnly className="mt-1 bg-gray-50" />
-                <p className="text-xs text-gray-400 mt-1">Email tidak dapat diubah</p>
-              </div>
-              <div>
-                <Label>Status Akun</Label>
-                <TextInput value={statusLabel(profile.status)} readOnly className="mt-1 bg-gray-50" />
-                <p className="text-xs text-gray-400 mt-1">Status akun tidak dapat diubah melalui profil</p>
-              </div>
-              <div>
                 <Label htmlFor="nip">NIP</Label>
-                <TextInput id="nip" name="nip" value={form.nip ?? ""} onChange={handleChange} className="mt-1" />
+                <TextInput id="nip" name="nip" value={form.nip ?? ""} onChange={handleChange} className="mt-1" inputMode="numeric" pattern="[0-9]*" />
               </div>
+
+              {/* Right column (2): Mata Pelajaran, Jenis Kelamin */}
               <div>
                 <Label htmlFor="mapel">Mata Pelajaran</Label>
                 <TextInput id="mapel" name="mapel" value={form.mapel ?? ""} onChange={handleChange} className="mt-1" />
@@ -308,9 +316,11 @@ export default function ProfilePage() {
                   <option value="perempuan">Perempuan</option>
                 </Select>
               </div>
-              <div>
+
+              {/* Full width fields: No HP, Alamat */}
+              <div className="col-span-2">
                 <Label htmlFor="no_hp">No. HP</Label>
-                <TextInput id="no_hp" name="no_hp" value={form.no_hp ?? ""} onChange={handleChange} className="mt-1" />
+                <TextInput id="no_hp" name="no_hp" value={form.no_hp ?? ""} onChange={handleChange} className="mt-1" inputMode="tel" pattern="[0-9]*" />
               </div>
               <div className="col-span-2">
                 <Label htmlFor="alamat">Alamat</Label>

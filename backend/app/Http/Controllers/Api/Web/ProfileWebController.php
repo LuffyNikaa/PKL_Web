@@ -91,7 +91,7 @@ class ProfileWebController extends Controller
 
                 $user->update(['nama_users' => $request->nama]);
 
-                Siswa::where('id_user', $user->id_users)->update([
+                Siswa::where('id_users', $user->id_users)->update([
                     'nama_siswa'   => $request->nama,
                     'no_siswa'     => $request->no_hp,
                     'alamat_siswa' => $request->alamat,
