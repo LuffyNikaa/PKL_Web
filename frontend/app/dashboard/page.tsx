@@ -43,23 +43,73 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
-    if (userData) setUser(JSON.parse(userData));
+    if (userData) {
+      setUser(JSON.parse(userData));
+    } else {
+      // Retry memuat user jika terjadi race-condition saat redirect login
+      setTimeout(() => {
+        const retryUserData = localStorage.getItem("user");
+        if (retryUserData) {
+          setUser(JSON.parse(retryUserData));
+        }
+      }, 300);
+    }
     fetchDashboard();
   }, []);
 
   const fetchDashboard = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("http://localhost:8000/api/admin/dashboard", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      setData(json.data);
+      if (!token) {
+        // Coba lagi setelah 500ms jika token belum tersinkronisasi di thread
+        setTimeout(async () => {
+          const retryToken = localStorage.getItem("token");
+          if (retryToken) {
+            await doFetch(retryToken);
+          } else {
+            setLoading(false);
+          }
+        }, 500);
+        return;
+      }
+      await doFetch(token);
     } catch (err) {
       console.error(err);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const doFetch = async (authToken: string) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/admin/dashboard", {
+        headers: { Authorization: `Bearer ${authToken}`, Accept: "application/json" },
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setData(json.data);
+        setLoading(false);
+      } else {
+        // Coba kembali setelah 1 detik jika backend sedang cold-starting database
+        throw new Error(json.message || "Gagal memuat");
+      }
+    } catch (err) {
+      console.warn("First attempt failed, retrying...", err);
+      setTimeout(async () => {
+        try {
+          const retryRes = await fetch("http://localhost:8000/api/admin/dashboard", {
+            headers: { Authorization: `Bearer ${authToken}`, Accept: "application/json" },
+          });
+          const retryJson = await retryRes.json();
+          if (retryRes.ok) {
+            setData(retryJson.data);
+          }
+        } catch (retryErr) {
+          console.error("Retry attempt failed:", retryErr);
+        } finally {
+          setLoading(false);
+        }
+      }, 1500);
     }
   };
 
