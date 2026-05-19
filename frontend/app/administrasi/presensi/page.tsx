@@ -31,6 +31,7 @@ type Siswa = {
   kelas_siswa: string;
   jurusan_siswa: string;
   dudi?: { nama_dudi: string };
+  periode?: { nama_periode: string };
 };
 
 type User = { name: string; email: string };
@@ -111,7 +112,15 @@ export default function DataPresensiPage() {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
-      setSiswaList(json.data || []);
+      const siswaFormatted = (json.data || []).map((s: any) => ({
+        id_siswa: s.id_siswa,
+        nama_siswa: s.nama_siswa,
+        kelas_siswa: s.kelas ? `${s.kelas.tingkat_kelas} ${s.kelas.jurusan?.nama_jurusan || ''} ${s.kelas.rombel}`.replace(/\s+/g, ' ').trim() : '-',
+        jurusan_siswa: s.kelas?.jurusan?.nama_jurusan || '-',
+        dudi: s.dudi || null,
+        periode: s.periode || null,
+      }));
+      setSiswaList(siswaFormatted);
     } catch (err) {
       console.error("Fetch siswa error:", err);
     }
@@ -193,19 +202,26 @@ export default function DataPresensiPage() {
     const pageW = doc.internal.pageSize.getWidth();
     const now = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 
-    // ===== HEADER =====
-    doc.setFillColor(30, 64, 175); // biru gelap
-    doc.rect(0, 0, pageW, 32, "F");
-
-    doc.setTextColor(255, 255, 255);
+    // ===== HEADER (KOP SURAT RESMI) =====
+    doc.setTextColor(20, 20, 20);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("REKAP PRESENSI PKL", pageW / 2, 14, { align: "center" });
+    doc.text("REKAP PRESENSI PRAKTEK KERJA LAPANGAN (PKL)", pageW / 2, 14, { align: "center" });
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("Sistem Informasi PKL", pageW / 2, 22, { align: "center" });
-    doc.text(`Dicetak: ${now}`, pageW / 2, 28, { align: "center" });
+    doc.text("SISTEM INFORMASI PKL - MONITORING PRESENSI SISWA", pageW / 2, 20, { align: "center" });
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Tanggal Cetak: ${now}`, pageW / 2, 26, { align: "center" });
+
+    // Double line below header (Kop border)
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.8);
+    doc.line(14, 29, pageW - 14, 29);
+    doc.setLineWidth(0.2);
+    doc.line(14, 30, pageW - 14, 30);
 
     // ===== INFO SISWA =====
     doc.setTextColor(30, 30, 30);
@@ -228,9 +244,7 @@ export default function DataPresensiPage() {
     const infoKanan = [
       ["Tempat PKL", selectedSiswa.dudi?.nama_dudi ?? "-"],
       ["Total Presensi", `${rekapSummary.total} hari`],
-      ["Periode", rekapData.length > 0
-        ? `${rekapData[rekapData.length - 1].tanggal_absensi} s/d ${rekapData[0].tanggal_absensi}`
-        : "-"],
+      ["Periode", selectedSiswa.periode?.nama_periode ?? "-"],
     ];
 
     let y = 52;
@@ -657,10 +671,10 @@ export default function DataPresensiPage() {
           <ModalHeader className="px-6 py-4 border-b border-gray-200">
             Detail Presensi
           </ModalHeader>
-          <ModalBody className="px-6 py-4">
+          <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
             {selected && (
               <form className="grid grid-cols-2 gap-4">
-                {/* Kolom kiri */}
+                {/* Kolom kiri (4 data) */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="d_nama">Nama Siswa</Label>
@@ -698,6 +712,10 @@ export default function DataPresensiPage() {
                       className="mt-1"
                     />
                   </div>
+                </div>
+
+                {/* Kolom kanan (4 data) */}
+                <div className="space-y-4">
                   <div>
                     <Label htmlFor="d_pulang">Waktu Pulang</Label>
                     <TextInput
@@ -706,18 +724,6 @@ export default function DataPresensiPage() {
                       readOnly
                       className="mt-1"
                     />
-                  </div>
-                </div>
-
-                {/* Kolom kanan */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="d_status">Status Presensi</Label>
-                    <div className="mt-2">
-                      <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status_absensi)}`}>
-                        {statusLabel(selected.status_absensi)}
-                      </span>
-                    </div>
                   </div>
                   <div>
                     <Label htmlFor="d_lat">Latitude</Label>
@@ -748,9 +754,19 @@ export default function DataPresensiPage() {
                   </div>
                 </div>
 
-                {/* Foto surat — full width */}
+                {/* Bagian Bawah 1: Status Presensi (Full Width) */}
+                <div className="col-span-2 mt-2">
+                  <Label htmlFor="d_status">Status Presensi</Label>
+                  <div className="mt-2">
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status_absensi)}`}>
+                      {statusLabel(selected.status_absensi)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bagian Bawah 2: Foto Surat (Full Width) */}
                 {selected.foto_surat && (
-                  <div className="col-span-2">
+                  <div className="col-span-2 mt-2">
                     <Label>Foto / Surat Keterangan</Label>
                     <div className="mt-2">
                       <a href={selected.foto_surat} target="_blank" rel="noopener noreferrer">

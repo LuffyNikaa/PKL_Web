@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import PageHeader from "../../components/PageHeader";
+import Toast, { ToastItem } from "../../components/Toast";
 import {
   Modal, Button, Label, TextInput, Select,
   ModalHeader, ModalBody, ModalFooter,
@@ -51,6 +52,7 @@ export default function PresentasiPage() {
   const [showTambah, setShowTambah]       = useState(false);
   const [showDetail, setShowDetail]       = useState(false);
   const [showFilter, setShowFilter]       = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isEdit, setIsEdit]               = useState(false);
   const [saving, setSaving]               = useState(false);
   const [form, setForm]                   = useState(emptyForm);
@@ -58,6 +60,15 @@ export default function PresentasiPage() {
   const [filterStatus, setFilterStatus]   = useState("");
   const [filterTanggal, setFilterTanggal] = useState("");
   const [activeFilter, setActiveFilter]   = useState({ nama: "", status: "", tanggal: "" });
+  const [searchQuery, setSearchQuery]     = useState("");
+
+  // Toast State
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const pushToast = (type: ToastItem["type"], message: string, duration = 3500) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    setToasts((s) => [...s, { id, type, message, duration }]);
+  };
+  const removeToast = (id: string) => setToasts((s) => s.filter((t) => t.id !== id));
 
   useEffect(() => {
     const u = localStorage.getItem("user");
@@ -175,21 +186,31 @@ export default function PresentasiPage() {
       if (!res.ok) throw new Error(json.message);
       fetchList(activeFilter);
       setShowTambah(false);
+      pushToast("success", isEdit ? "Jadwal presentasi berhasil diperbarui!" : "Jadwal presentasi berhasil ditambahkan!");
     } catch (err: any) { 
-      alert(err.message); 
+      pushToast("error", err.message || "Terjadi kesalahan saat menyimpan"); 
     } finally { 
       setSaving(false); 
     }
   };
 
   const handleDelete = async () => {
-    if (!selected || !confirm(`Hapus jadwal presentasi ${selected.nama_siswa}?`)) return;
-    const token = localStorage.getItem("token");
-    await fetch(`http://localhost:8000/api/admin/presentasi/${selected.id_presentasi}`, {
-      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchList(activeFilter);
-    setShowDetail(false);
+    if (!selected) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:8000/api/admin/presentasi/${selected.id_presentasi}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Gagal menghapus jadwal presentasi");
+      
+      fetchList(activeFilter);
+      setShowConfirmDelete(false);
+      setShowDetail(false);
+      setSelected(null);
+      pushToast("success", "Jadwal presentasi berhasil dihapus!");
+    } catch (err: any) {
+      pushToast("error", err.message || "Terjadi kesalahan saat menghapus");
+    }
   };
 
   const applyFilter = () => {
@@ -210,9 +231,18 @@ export default function PresentasiPage() {
   };
 
   const hasFilter = activeFilter.nama || activeFilter.status || activeFilter.tanggal;
-  const totalPages = Math.ceil(list.length / DATA_PER_PAGE);
+  const filteredList = list.filter(item => {
+    const q = searchQuery.toLowerCase();
+    return (
+      item.nama_siswa?.toLowerCase().includes(q) ||
+      item.kelas_siswa?.toLowerCase().includes(q) ||
+      item.tempat_pkl?.toLowerCase().includes(q) ||
+      item.ruangan?.toLowerCase().includes(q)
+    );
+  });
+  const totalPages = Math.ceil(filteredList.length / DATA_PER_PAGE);
   const start = (page - 1) * DATA_PER_PAGE;
-  const currentData = list.slice(start, start + DATA_PER_PAGE);
+  const currentData = filteredList.slice(start, start + DATA_PER_PAGE);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   if (!user) return null;
@@ -226,21 +256,30 @@ export default function PresentasiPage() {
           <div className="bg-white rounded-xl p-6 flex flex-col min-h-[600px]">
             <h1 className="text-lg font-semibold mb-4 font-inter">Daftar Jadwal Presentasi</h1>
 
-            {/* Tombol */}
+            {/* Tombol Tambah */}
+            <button onClick={openTambah} className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter w-fit">
+              Tambah <span className="text-lg">+</span>
+            </button>
+
+            {/* Toolbar Search & Filter */}
             <div className="flex items-center gap-3 mb-5">
-              <button onClick={openTambah} className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter">
-                Tambah <span className="text-lg">+</span>
-              </button>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                placeholder="Cari..."
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-400 font-inter"
+              />
               <button onClick={() => setShowFilter(true)} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-inter border ${hasFilter ? "bg-blue-50 border-blue-400 text-blue-600" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"}`}>
                 🔍 Filter
                 {hasFilter && <span className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{[activeFilter.nama, activeFilter.status, activeFilter.tanggal].filter(Boolean).length}</span>}
               </button>
               {hasFilter && (
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap font-inter">
                   {activeFilter.nama    && <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">Nama: {activeFilter.nama}</span>}
                   {activeFilter.status  && <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">Status: {statusLabel(activeFilter.status)}</span>}
                   {activeFilter.tanggal && <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">Tanggal: {activeFilter.tanggal}</span>}
-                  <button onClick={resetFilter} className="text-xs text-red-500 hover:text-red-700 underline">Hapus filter</button>
+                  <button onClick={resetFilter} className="text-xs text-red-500 hover:text-red-700 underline font-inter">Hapus filter</button>
                 </div>
               )}
             </div>
@@ -253,26 +292,20 @@ export default function PresentasiPage() {
                     <TableHeadCell>No</TableHeadCell>
                     <TableHeadCell>Nama Siswa</TableHeadCell>
                     <TableHeadCell>Kelas</TableHeadCell>
-                    <TableHeadCell>Tempat PKL</TableHeadCell>
                     <TableHeadCell>Tanggal</TableHeadCell>
-                    <TableHeadCell>Jam</TableHeadCell>
-                    <TableHeadCell>Ruangan</TableHeadCell>
                     <TableHeadCell>Status</TableHeadCell>
                     <TableHeadCell className="text-center">Aksi</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody className="divide-y">
                   {currentData.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center text-gray-400 py-8">Tidak ada data presentasi</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">Tidak ada data presentasi</TableCell></TableRow>
                   ) : currentData.map((item, i) => (
                     <TableRow key={item.id_presentasi} className="bg-white">
                       <TableCell>{start + i + 1}</TableCell>
                       <TableCell className="font-medium text-gray-900">{item.nama_siswa}</TableCell>
                       <TableCell>{item.kelas_siswa || "-"}</TableCell>
-                      <TableCell>{item.tempat_pkl ?? "-"}</TableCell>
                       <TableCell>{item.tanggal}</TableCell>
-                      <TableCell>{item.jam ?? "-"}</TableCell>
-                      <TableCell>{item.ruangan ?? "-"}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(item.status)}`}>{statusLabel(item.status)}</span>
                       </TableCell>
@@ -285,16 +318,36 @@ export default function PresentasiPage() {
               </Table>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-1 mt-6">
-                <button onClick={() => setPage(1)} disabled={page===1} className="px-2 py-1 text-sm rounded disabled:opacity-40 hover:bg-gray-100">«</button>
-                <button onClick={() => setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-2 py-1 text-sm rounded disabled:opacity-40 hover:bg-gray-100">‹</button>
-                {pages.map(p=><button key={p} onClick={()=>setPage(p)} className={`px-3 py-1 text-sm rounded ${page===p?"bg-blue-500 text-white":"hover:bg-gray-100 text-gray-700"}`}>{p}</button>)}
-                <button onClick={() => setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} className="px-2 py-1 text-sm rounded disabled:opacity-40 hover:bg-gray-100">›</button>
-                <button onClick={() => setPage(totalPages)} disabled={page===totalPages} className="px-2 py-1 text-sm rounded disabled:opacity-40 hover:bg-gray-100">»</button>
-              </div>
-            )}
+            {/* PAGINATION */}
+            <div className="mt-auto pt-6 flex justify-center gap-2 text-sm font-inter">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="px-3 py-1 rounded-md border disabled:opacity-40"
+              >
+                Prev
+              </button>
+
+              {pages.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`px-3 py-1 rounded-md border ${
+                    p === page ? "bg-blue-500 text-white border-blue-500" : "hover:bg-gray-100"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages || totalPages === 0}
+                className="px-3 py-1 rounded-md border disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 
@@ -322,7 +375,7 @@ export default function PresentasiPage() {
         </Modal>
 
         {/* Modal Tambah/Edit */}
-        <Modal dismissible show={showTambah} size="xl" onClose={() => setShowTambah(false)}>
+        <Modal dismissible show={showTambah} size="4xl" onClose={() => setShowTambah(false)}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">{isEdit ? "Edit Jadwal Presentasi" : "Tambah Jadwal Presentasi"}</ModalHeader>
           <ModalBody className="px-6 py-4">
             <form className="space-y-4">
@@ -347,7 +400,7 @@ export default function PresentasiPage() {
               </div>
               <div>
                 <Label>Ruangan <span className="text-red-500">*</span></Label>
-                <TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Contoh: Lab TKJ 1 atau Aula" className="mt-1"/>
+                <TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Masukkan lokasi presentasi" className="mt-1"/>
               </div>
               <div>
                 <Label>Status <span className="text-red-500">*</span></Label>
@@ -360,65 +413,74 @@ export default function PresentasiPage() {
           </ModalBody>
           <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
             <Button color="blue" onClick={handleSimpan} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
-            <Button color="light" onClick={() => setShowTambah(false)}>Batal</Button>
+            <Button color="red" onClick={() => setShowTambah(false)}>Batal</Button>
           </ModalFooter>
         </Modal>
 
         {/* Modal Detail */}
-        <Modal dismissible show={showDetail} size="xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
+        <Modal dismissible show={showDetail} size="4xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Jadwal Presentasi</ModalHeader>
           <ModalBody className="px-6 py-4">
             {selected && (
-              <div className="space-y-4">
+              <div className="space-y-4 font-inter">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nama Siswa</Label>
-                    <TextInput value={selected.nama_siswa ?? "-"} readOnly className="mt-1" />
+                  {/* KIRI */}
+                  <div className="space-y-4">
+                    <div><Label>Nama Siswa</Label><TextInput value={selected.nama_siswa ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
+                    <div><Label>Kelas</Label><TextInput value={selected.kelas_siswa ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
+                    <div><Label>Tempat PKL</Label><TextInput value={selected.tempat_pkl ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
                   </div>
-                  <div>
-                    <Label>Kelas</Label>
-                    <TextInput value={selected.kelas_siswa ?? "-"} readOnly className="mt-1" />
+
+                  {/* KANAN */}
+                  <div className="space-y-4">
+                    <div><Label>Tanggal</Label><TextInput value={selected.tanggal ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
+                    <div><Label>Jam</Label><TextInput value={selected.jam ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
+                    <div><Label>Ruangan</Label><TextInput value={selected.ruangan ?? "-"} readOnly className="mt-1 bg-gray-50" /></div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Tempat PKL</Label>
-                    <TextInput value={selected.tempat_pkl ?? "-"} readOnly className="mt-1" />
+
+                <div className="pt-4 border-t border-gray-100">
+                  <Label>Status</Label>
+                  <div className="mt-2">
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status)}`}>
+                      {statusLabel(selected.status)}
+                    </span>
                   </div>
-                  <div>
-                    <Label>Status</Label>
-                    <div className="mt-2">
-                      <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColor(selected.status)}`}>
-                        {statusLabel(selected.status)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Tanggal</Label>
-                    <TextInput value={selected.tanggal ?? "-"} readOnly className="mt-1" />
-                  </div>
-                  <div>
-                    <Label>Jam</Label>
-                    <TextInput value={selected.jam ?? "-"} readOnly className="mt-1" />
-                  </div>
-                </div>
-                <div>
-                  <Label>Ruangan</Label>
-                  <TextInput value={selected.ruangan ?? "-"} readOnly className="mt-1" />
                 </div>
               </div>
             )}
           </ModalBody>
           <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-            <div className="flex gap-2">
-              <Button color="blue" onClick={openEdit}>Edit</Button>
-              <Button color="red" onClick={handleDelete}>Hapus</Button>
-            </div>
-            <Button color="gray" onClick={() => { setShowDetail(false); setSelected(null); }}>Tutup</Button>
+            <Button color="blue" onClick={openEdit}>Edit</Button>
+            <Button color="red" onClick={() => { setShowConfirmDelete(true); setShowDetail(false); }}>Hapus</Button>
           </ModalFooter>
         </Modal>
+
+        {/* ===== MODAL KONFIRMASI HAPUS ===== */}
+        <Modal dismissible show={showConfirmDelete} size="sm" onClose={() => setShowConfirmDelete(false)}>
+          <ModalHeader className="px-6 py-4 border-b border-gray-200">Konfirmasi Hapus</ModalHeader>
+          <ModalBody className="px-6 py-4">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <p className="text-gray-700 font-inter">
+                Apakah Anda yakin ingin menghapus jadwal presentasi untuk siswa{" "}
+                <span className="font-semibold text-gray-900">{selected?.nama_siswa}</span>?
+              </p>
+              <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+          </ModalBody>
+          <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
+            <Button color="gray" onClick={() => { setShowConfirmDelete(false); setShowDetail(true); }}>Batal</Button>
+            <Button color="red" onClick={handleDelete}>Ya, Hapus</Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Toast Notification Container */}
+        <Toast items={toasts} onRemove={removeToast} />
       </main>
     </div>
   );

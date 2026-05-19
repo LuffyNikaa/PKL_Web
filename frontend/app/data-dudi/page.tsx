@@ -340,7 +340,7 @@ export default function DataDudiPage() {
       {/* ===== MODAL TAMBAH DUDI ===== */}
       <Modal dismissible show={showModal} size="4xl" onClose={() => { setShowModal(false); resetFormDudi(); }}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Dudi</ModalHeader>
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           {/* grid tinggi penuh agar map bisa stretch */}
           <div className="grid grid-cols-2 gap-4" style={{ minHeight: "480px" }}>
             {/* Kiri: Form */}
@@ -426,7 +426,7 @@ export default function DataDudiPage() {
         <ModalHeader className="px-6 py-4 border-b border-gray-200">
           {isEditMode ? "Edit Data DUDI" : "Detail Data DUDI"}
         </ModalHeader>
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           {selectedDudi && (
             <div className="grid grid-cols-2 gap-6" style={{ minHeight: "480px" }}>
               {/* Kiri: Form */}

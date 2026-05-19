@@ -373,7 +373,7 @@ const handleUpdateGuru = async () => {
       <Modal dismissible show={showModal} size="4xl" onClose={() => setShowModal(false)}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Guru</ModalHeader>
 
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           <form className="space-y-4">
             {/* Baris 1: 2 kolom */}
             <div className="grid grid-cols-2 gap-4">
@@ -549,7 +549,7 @@ const handleUpdateGuru = async () => {
           {isEditMode ? "Edit Data Guru" : "Detail Data Guru"}
         </ModalHeader>
 
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           {selectedGuru && (
           <form className="space-y-4">
             {/* Baris atas: 3 kiri + 3 kanan */}

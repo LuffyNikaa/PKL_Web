@@ -22,9 +22,10 @@ class SiswaController extends Controller
     public function index()
     {
         try {
-            $siswa = Siswa::with([
+             $siswa = Siswa::with([
                 'kelas.jurusan',
                 'penempatan.dudi',
+                'penempatan.periode',
                 'user'
             ])->get();
 
@@ -60,6 +61,9 @@ class SiswaController extends Controller
                         ] : null,
                         'dudi' => $penempatan ? [
                             'nama_dudi' => $penempatan->dudi?->nama_dudi
+                        ] : null,
+                        'periode' => $penempatan ? [
+                            'nama_periode' => $penempatan->periode?->nama_periode
                         ] : null,
                     ];
                 })

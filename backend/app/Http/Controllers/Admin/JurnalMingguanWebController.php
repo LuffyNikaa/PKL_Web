@@ -12,7 +12,7 @@ class JurnalMingguanWebController extends Controller
     // GET /api/admin/jurnal-mingguan
     public function index(Request $request)
     {
-        $query = JurnalMingguan::with(['penempatan.siswa', 'penempatan.dudi']);
+        $query = JurnalMingguan::with(['penempatan.siswa.kelas.jurusan', 'penempatan.dudi']);
 
         if ($request->filled('nama')) {
             $query->whereHas('penempatan.siswa', function ($q) use ($request) {
@@ -43,10 +43,19 @@ class JurnalMingguanWebController extends Controller
                 // Hitung minggu ke-
                 $mingguKe = $this->hitungMinggu($j->penempatan?->id_penempatan, $tanggal);
 
+                // Format kelas tingkat_kelas + nama_jurusan + rombel
+                $kelasFormatted = '-';
+                if ($siswa?->kelas) {
+                    $tingkat = $siswa->kelas->tingkat_kelas ?? '';
+                    $jurusan = $siswa->kelas->jurusan?->nama_jurusan ?? '';
+                    $rombel  = $siswa->kelas->rombel ?? '';
+                    $kelasFormatted = trim(preg_replace('/\s+/', ' ', "{$tingkat} {$jurusan} {$rombel}"));
+                }
+
                 return [
                     'id_jurnal_mingguan' => $j->id_jurnal_mingguan,
                     'nama'               => $siswa?->nama_siswa ?? '-',
-                    'kelas'              => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+                    'kelas'              => $kelasFormatted,
                     'tempat_pkl'         => $dudi?->nama_dudi ?? '-',
                     'tanggal'            => $tanggal->format('d-m-Y'),
                     'range_tanggal'      => $senin->format('d-m-Y') . ' s/d ' . $mingguAkhir->format('d-m-Y'),
@@ -96,14 +105,38 @@ class JurnalMingguanWebController extends Controller
             $senin   = $tanggal->copy()->startOfWeek(Carbon::MONDAY);
             $minggu  = $tanggal->copy()->endOfWeek(Carbon::SUNDAY);
 
+            // Pre-convert gambar ke base64 untuk menghindari CORS error di browser saat render PDF
+            $base64 = null;
+            if ($j->dokumentasi_jurnal_mingguan) {
+                try {
+                    if (\Storage::disk('public')->exists($j->dokumentasi_jurnal_mingguan)) {
+                        $fileContent = \Storage::disk('public')->get($j->dokumentasi_jurnal_mingguan);
+                        $mimeType = \Storage::disk('public')->mimeType($j->dokumentasi_jurnal_mingguan);
+                        $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($fileContent);
+                    } else {
+                        $publicPath = storage_path('app/public/' . $j->dokumentasi_jurnal_mingguan);
+                        if (file_exists($publicPath)) {
+                            $fileContent = file_get_contents($publicPath);
+                            $mimeType = mime_content_type($publicPath);
+                            $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($fileContent);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log error if any
+                }
+            }
+
+            // Fallback ke URL jika base64 gagal didapat
+            if (!$base64 && $j->dokumentasi_jurnal_mingguan) {
+                $base64 = asset('storage/' . $j->dokumentasi_jurnal_mingguan);
+            }
+
             return [
                 'minggu_ke'     => $index + 1,
                 'tanggal'       => $j->tanggal_jurnal_mingguan,
                 'range_tanggal' => $senin->format('d-m-Y') . ' s/d ' . $minggu->format('d-m-Y'),
                 'kegiatan'      => $j->kegiatan_jurnal_mingguan,
-                'dokumentasi'   => $j->dokumentasi_jurnal_mingguan 
-                                    ? asset('storage/' . $j->dokumentasi_jurnal_mingguan) 
-                                    : null,
+                'dokumentasi'   => $base64,
             ];
         });
 

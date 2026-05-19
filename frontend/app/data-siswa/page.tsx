@@ -64,6 +64,9 @@ export default function DataSiswaPage() {
   const [search, setSearch] = useState("");
   const [filterKelas, setFilterKelas] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [showFilter, setShowFilter] = useState(false);
+  const [tempFilterKelas, setTempFilterKelas] = useState("all");
+  const [tempFilterStatus, setTempFilterStatus] = useState("all");
 
   const [selectedJurusanForm, setSelectedJurusanForm] = useState("");
   const uniqueJurusan = Array.from(new Set(kelas.map(k => k.jurusan?.nama_jurusan).filter(Boolean))) as string[];
@@ -325,6 +328,8 @@ export default function DataSiswaPage() {
   const currentData = filteredData.slice(start, start + DATA_PER_PAGE);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
+  const hasActiveFilter = filterKelas !== "all" || filterStatus !== "all";
+
   if (!user) return null;
 
   return (
@@ -352,28 +357,64 @@ export default function DataSiswaPage() {
             </button>
 
             {/* Search & Filter */}
-            <div className="mb-4">
-              <SearchFilter
-                search={search}
-                onSearchChange={(v) => { setSearch(v); setPage(1); }}
-                filter={filterKelas}
-                onFilterChange={(v) => { setFilterKelas(v); setPage(1); }}
+            <div className="flex items-center gap-3 mb-5">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Cari siswa"
-                filterOptions={[
-                  { value: "all", label: "Semua Kelas" },
-                  ...kelas.map((k) => ({
-                    value: k.id_kelas.toString(),
-                    label: `${k.tingkat_kelas} ${k.jurusan?.nama_jurusan || ''} ${k.rombel}`.replace(/\s+/g, ' ').trim()
-                  }))
-                ]}
-                filter2={filterStatus}
-                onFilter2Change={(v) => { setFilterStatus(v); setPage(1); }}
-                filterOptions2={[
-                  { value: "all", label: "Semua Status" },
-                  { value: "aktif", label: "Aktif" },
-                  { value: "nonaktif", label: "Nonaktif" },
-                ]}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-400 font-inter"
               />
+
+              <button
+                onClick={() => {
+                  setTempFilterKelas(filterKelas);
+                  setTempFilterStatus(filterStatus);
+                  setShowFilter(true);
+                }}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-inter border ${
+                  hasActiveFilter
+                    ? "bg-blue-50 border-blue-400 text-blue-600"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                🔍 Filter
+                {hasActiveFilter && (
+                  <span className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {[filterKelas !== "all", filterStatus !== "all"].filter(Boolean).length}
+                  </span>
+                )}
+              </button>
+
+              {hasActiveFilter && (
+                <div className="flex items-center gap-2 flex-wrap font-inter">
+                  {filterKelas !== "all" && (
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                      Kelas: {(() => {
+                        const k = kelas.find(kl => kl.id_kelas.toString() === filterKelas);
+                        return k ? `${k.tingkat_kelas} ${k.jurusan?.nama_jurusan || ''} ${k.rombel}`.replace(/\s+/g, ' ').trim() : "";
+                      })()}
+                    </span>
+                  )}
+                  {filterStatus !== "all" && (
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                      Status: {filterStatus === "aktif" ? "Aktif" : "Nonaktif"}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setFilterKelas("all");
+                      setFilterStatus("all");
+                      setTempFilterKelas("all");
+                      setTempFilterStatus("all");
+                      setPage(1);
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700 underline"
+                  >
+                    Hapus filter
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* TABLE */}
@@ -488,7 +529,7 @@ export default function DataSiswaPage() {
       <Modal dismissible show={showModal} size="4xl" onClose={() => { setShowModal(false); setSelectedJurusanForm(""); }}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Siswa</ModalHeader>
 
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           <form className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-5">
@@ -632,7 +673,7 @@ export default function DataSiswaPage() {
           {isEditMode ? "Edit Data Siswa" : "Detail Data Siswa"}
         </ModalHeader>
 
-        <ModalBody className="px-6 py-4">
+        <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           {selectedSiswa && (
             <>
               <form className="flex flex-col gap-4">
@@ -791,6 +832,71 @@ export default function DataSiswaPage() {
               </Button>
             </>
           )}
+        </ModalFooter>
+      </Modal>
+
+      {/* ===== MODAL FILTER ===== */}
+      <Modal dismissible show={showFilter} size="md" onClose={() => setShowFilter(false)}>
+        <ModalHeader className="px-6 py-4 border-b border-gray-200">Filter Data Siswa</ModalHeader>
+        <ModalBody className="px-6 py-4">
+          <div className="space-y-4 font-inter">
+            <div>
+              <Label htmlFor="filterKelasSelect">Kelas</Label>
+              <Select
+                id="filterKelasSelect"
+                value={tempFilterKelas}
+                onChange={(e) => setTempFilterKelas(e.target.value)}
+                className="mt-1"
+              >
+                <option value="all">Semua Kelas</option>
+                {kelas.map((k) => (
+                  <option key={k.id_kelas} value={k.id_kelas.toString()}>
+                    {`${k.tingkat_kelas} ${k.jurusan?.nama_jurusan || ''} ${k.rombel}`.replace(/\s+/g, ' ').trim()}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="filterStatusSelect">Status Akun</Label>
+              <Select
+                id="filterStatusSelect"
+                value={tempFilterStatus}
+                onChange={(e) => setTempFilterStatus(e.target.value)}
+                className="mt-1"
+              >
+                <option value="all">Semua Status</option>
+                <option value="aktif">Aktif</option>
+                <option value="nonaktif">Nonaktif</option>
+              </Select>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
+          <Button
+            color="blue"
+            onClick={() => {
+              setFilterKelas(tempFilterKelas);
+              setFilterStatus(tempFilterStatus);
+              setPage(1);
+              setShowFilter(false);
+            }}
+          >
+            Terapkan Filter
+          </Button>
+          <Button
+            color="light"
+            onClick={() => {
+              setTempFilterKelas("all");
+              setTempFilterStatus("all");
+              setFilterKelas("all");
+              setFilterStatus("all");
+              setPage(1);
+              setShowFilter(false);
+            }}
+          >
+            Reset
+          </Button>
         </ModalFooter>
       </Modal>
 

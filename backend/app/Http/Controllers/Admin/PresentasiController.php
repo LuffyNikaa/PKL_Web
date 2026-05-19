@@ -12,7 +12,7 @@ class PresentasiController extends Controller
     // GET /api/admin/presentasi
     public function index(Request $request)
     {
-        $query = Presentasi::with(['penempatan.siswa', 'penempatan.dudi']);
+        $query = Presentasi::with(['penempatan.siswa.kelas.jurusan', 'penempatan.dudi']);
 
         if ($request->filled('nama')) {
             $query->whereHas('penempatan.siswa', fn($q) =>
@@ -166,7 +166,9 @@ class PresentasiController extends Controller
         return [
             'id_presentasi'     => $p->id_presentasi,
             'nama_siswa'        => $siswa?->nama_siswa ?? '-',
-            'kelas_siswa'       => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+            'kelas_siswa'       => $siswa?->kelas 
+                ? trim(preg_replace('/\s+/', ' ', $siswa->kelas->tingkat_kelas . ' ' . ($siswa->kelas->jurusan?->singkatan_jurusan ?? $siswa->kelas->jurusan?->nama_jurusan ?? '') . ' ' . ($siswa->kelas->rombel ?? ''))) 
+                : '-',
             'tempat_pkl'        => $dudi?->nama_dudi ?? '-',
             'tanggal'           => $p->tanggal_presentasi ? Carbon::parse($p->tanggal_presentasi)->format('d-m-Y') : '-',
             'tanggal_raw'       => $p->tanggal_presentasi ? Carbon::parse($p->tanggal_presentasi)->format('Y-m-d') : null,

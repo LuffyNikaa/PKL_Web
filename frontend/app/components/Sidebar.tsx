@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/dist/client/components/navigation";
 import Link from "next/dist/client/link";
@@ -17,6 +17,7 @@ export default function Sidebar({ user }: { user: User }) {
   const [openAdmin, setOpenAdmin] = useState(false);
   const [openJadwal, setOpenJadwal] = useState(false);
   const [role, setRole] = useState<string>("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedRole = localStorage.getItem("role");
@@ -24,7 +25,23 @@ export default function Sidebar({ user }: { user: User }) {
 
     setOpenAdmin(pathname.includes("/administrasi"));
     setOpenJadwal(pathname.includes("/jadwal"));
-    }, [pathname]);
+  }, [pathname]);
+
+  useEffect(() => {
+    // Restore scroll position ONLY AFTER role is set (because DOM height depends on role!)
+    if (role) {
+      setTimeout(() => {
+        const savedScroll = sessionStorage.getItem("sidebarScroll");
+        if (savedScroll && scrollRef.current) {
+          scrollRef.current.scrollTop = parseInt(savedScroll, 10);
+        }
+      }, 50);
+    }
+  }, [pathname, role]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    sessionStorage.setItem("sidebarScroll", e.currentTarget.scrollTop.toString());
+  };
 
   const handleLogout = async () => {
     const token = localStorage.getItem("token");
@@ -54,7 +71,11 @@ export default function Sidebar({ user }: { user: User }) {
       </div>
 
       {/* Navigation Section - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        className="flex-1 overflow-y-auto" 
+        ref={scrollRef} 
+        onScroll={handleScroll}
+      >
         <nav className="p-4 space-y-5 text-sm">
 
           {/* Dashboard */}

@@ -25,6 +25,7 @@ type Siswa = {
   kelas_siswa: string;
   jurusan_siswa: string;
   dudi?: { nama_dudi: string };
+  periode?: { nama_periode: string };
 };
 
 type User = { name: string; email: string };
@@ -86,7 +87,15 @@ export default function DataJurnalHarianPage() {
       });
       const json = await res.json();
       console.log("Siswa data:", json.data); // Debug log
-      setSiswaList(json.data || []);
+      const siswaFormatted = (json.data || []).map((s: any) => ({
+        id_siswa: s.id_siswa,
+        nama_siswa: s.nama_siswa,
+        kelas_siswa: s.kelas ? `${s.kelas.tingkat_kelas} ${s.kelas.jurusan?.nama_jurusan || ''} ${s.kelas.rombel}`.replace(/\s+/g, ' ').trim() : '-',
+        jurusan_siswa: s.kelas?.jurusan?.nama_jurusan || '-',
+        dudi: s.dudi || null,
+        periode: s.periode || null,
+      }));
+      setSiswaList(siswaFormatted);
     } catch (err) { console.error("Fetch siswa error:", err); }
   };
 
@@ -143,15 +152,26 @@ export default function DataJurnalHarianPage() {
     const pageW = doc.internal.pageSize.getWidth();
     const now = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 
-    // Header
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 0, pageW, 32, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16); doc.setFont("helvetica", "bold");
-    doc.text("REKAP JURNAL HARIAN PKL", pageW / 2, 14, { align: "center" });
-    doc.setFontSize(9); doc.setFont("helvetica", "normal");
-    doc.text("Sistem Informasi PKL", pageW / 2, 22, { align: "center" });
-    doc.text(`Dicetak: ${now}`, pageW / 2, 28, { align: "center" });
+    // ===== HEADER (KOP SURAT RESMI) =====
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("REKAP JURNAL HARIAN PRAKTEK KERJA LAPANGAN (PKL)", pageW / 2, 14, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("SISTEM INFORMASI PKL - MONITORING JURNAL SISWA", pageW / 2, 20, { align: "center" });
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Tanggal Cetak: ${now}`, pageW / 2, 26, { align: "center" });
+
+    // Double line below header (Kop border)
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.8);
+    doc.line(14, 29, pageW - 14, 29);
+    doc.setLineWidth(0.2);
+    doc.line(14, 30, pageW - 14, 30);
 
     // Info siswa
     doc.setTextColor(30, 30, 30);
@@ -169,9 +189,7 @@ export default function DataJurnalHarianPage() {
     const infoKanan = [
       ["Tempat PKL",    selectedSiswa.dudi?.nama_dudi ?? "-"],
       ["Total Jurnal",  `${rekapData.length} entri`],
-      ["Periode",       rekapData.length > 0
-        ? `${rekapData[rekapData.length - 1].tanggal} s/d ${rekapData[0].tanggal}`
-        : "-"],
+      ["Periode",       selectedSiswa.periode?.nama_periode ?? "-"],
     ];
 
     let y = 52;
@@ -187,47 +205,65 @@ export default function DataJurnalHarianPage() {
       y += 7;
     });
 
-    // Summary box
-    const sumY = 80;
-    doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text("Ringkasan", 14, sumY);
-    doc.line(14, sumY + 2, pageW - 14, sumY + 2);
+    // Helper format hari dan tanggal
+    const formatHariTanggal = (dateStr: string) => {
+      try {
+        let dateObj: Date;
+        if (dateStr.includes("-")) {
+          const parts = dateStr.split("-");
+          if (parts[0].length === 4) {
+            dateObj = new Date(dateStr);
+          } else {
+            dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          }
+        } else {
+          dateObj = new Date(dateStr);
+        }
 
-    const boxW = (pageW - 28 - 6) / 3;
-    const boxes = [
-      { label: "Total Jurnal", value: rekapData.length, r: 200, g: 200, b: 200, tr: 50, tg: 50, tb: 50 },
-      { label: "Hari Pertama", value: rekapData.length > 0 ? rekapData[rekapData.length - 1].tanggal : "-", r: 187, g: 247, b: 208, tr: 22, tg: 101, tb: 52 },
-      { label: "Hari Terakhir", value: rekapData.length > 0 ? rekapData[0].tanggal : "-", r: 191, g: 219, b: 254, tr: 29, tg: 78, tb: 216 },
-    ];
-    boxes.forEach((box, i) => {
-      const bx = 14 + i * (boxW + 3);
-      const by = sumY + 5;
-      doc.setFillColor(box.r, box.g, box.b);
-      doc.roundedRect(bx, by, boxW, 18, 2, 2, "F");
-      doc.setTextColor(box.tr, box.tg, box.tb);
-      doc.setFontSize(typeof box.value === "number" ? 16 : 10);
-      doc.setFont("helvetica", "bold");
-      doc.text(String(box.value), bx + boxW / 2, by + 10, { align: "center" });
-      doc.setFontSize(8); doc.setFont("helvetica", "normal");
-      doc.text(box.label, bx + boxW / 2, by + 15.5, { align: "center" });
-    });
+        if (isNaN(dateObj.getTime())) return dateStr;
+
+        const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+        const dayName = days[dateObj.getDay()];
+
+        const formattedDate = dateObj.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        }).replace(/\//g, "-");
+
+        return `${dayName}, ${formattedDate}`;
+      } catch {
+        return dateStr;
+      }
+    };
 
     // Tabel
+    const tableStartY = 80;
     doc.setTextColor(30, 30, 30);
     doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text("Riwayat Jurnal Harian", 14, sumY + 32);
+    doc.text("Riwayat Jurnal Harian", 14, tableStartY);
 
     autoTable(doc, {
-      startY: sumY + 35,
-      head: [["No", "Tanggal", "Kegiatan"]],
-      body: rekapData.map((r, i) => [i + 1, r.tanggal, r.kegiatan]),
+      startY: tableStartY + 4,
+      theme: "grid",
+      head: [["No", "Hari/Tanggal", "Kegiatan Jurnal", "Catatan DUDI", "Paraf"]],
+      body: rekapData.map((r, i) => [
+        i + 1,
+        formatHariTanggal(r.tanggal),
+        r.kegiatan,
+        "", // area kosong untuk catatan manual DUDI
+        ""  // area kosong untuk paraf manual DUDI
+      ]),
+      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      bodyStyles: { fontSize: 9 },
+      bodyStyles: { fontSize: 8.5, valign: "middle" },
       alternateRowStyles: { fillColor: [245, 247, 255] },
       columnStyles: {
         0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 28 },
-        2: { cellWidth: "auto" },
+        1: { cellWidth: 38 },
+        2: { cellWidth: 74 },
+        3: { cellWidth: 40 }, // catatan dudi
+        4: { cellWidth: 20, halign: "center" }, // paraf dudi
       },
       margin: { left: 14, right: 14 },
     });
@@ -432,11 +468,11 @@ export default function DataJurnalHarianPage() {
                         <p className="text-lg font-bold text-gray-700">{rekapData.length}</p>
                         <p className="text-xs text-gray-500">Total Jurnal</p>
                       </div>
-                      <div className="text-center p-2 bg-blue-50 rounded-lg">
-                        <p className="text-sm font-bold text-blue-600">
-                          {rekapData.length > 0 ? rekapData[rekapData.length - 1].tanggal : "-"}
+                      <div className="text-center p-2 bg-blue-50 rounded-lg flex flex-col justify-center">
+                        <p className="text-sm font-bold text-blue-600 truncate max-w-full">
+                          {selectedSiswa.periode?.nama_periode ?? "-"}
                         </p>
-                        <p className="text-xs text-blue-400">Jurnal Pertama</p>
+                        <p className="text-xs text-blue-400">Periode PKL</p>
                       </div>
                     </div>
 
@@ -479,7 +515,7 @@ export default function DataJurnalHarianPage() {
         {/* ===== MODAL DETAIL ===== */}
         <Modal dismissible show={showDetail} size="4xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Jurnal Harian</ModalHeader>
-          <ModalBody className="px-6 py-4">
+          <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
             {selected && (
               <form className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">

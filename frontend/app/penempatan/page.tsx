@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import PageHeader from "../components/PageHeader";
+import SearchFilter from "../components/SearchFilter";
+import Toast, { ToastItem } from "../components/Toast";
 import {
   Modal, Button, Label, Select,
   ModalHeader, ModalBody, ModalFooter,
@@ -74,8 +76,19 @@ export default function PenempatanPage() {
   const [selectedPenempatan, setSelectedPenempatan] = useState<Penempatan | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [form, setForm] = useState(emptyForm);
+
+  const [search, setSearch] = useState("");
+  const [filterPeriode, setFilterPeriode] = useState("all");
+
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const pushToast = (type: ToastItem["type"], message: string, duration = 3500) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    setToasts((s) => [...s, { id, type, message, duration }]);
+  };
+  const removeToast = (id: string) => setToasts((s) => s.filter((t) => t.id !== id));
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -96,68 +109,34 @@ export default function PenempatanPage() {
     }
   };
 
-  const fetchSiswa = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("http://localhost:8000/api/admin/siswa", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      setSiswaList(json.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchDudi = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("http://localhost:8000/api/admin/dudi", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      setDudiList(json.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchGuru = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("http://localhost:8000/api/admin/guru", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      setGuruList(json.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchPeriode = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("http://localhost:8000/api/admin/periode", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      setPeriodeList(json.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    fetchPenempatan();
-    fetchSiswa();
-    fetchDudi();
-    fetchGuru();
-    fetchPeriode();
+    const loadAllData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+      try {
+        const [resP, resS, resD, resG, resPer] = await Promise.all([
+          fetch("http://localhost:8000/api/admin/penempatan", { headers }),
+          fetch("http://localhost:8000/api/admin/siswa", { headers }),
+          fetch("http://localhost:8000/api/admin/dudi", { headers }),
+          fetch("http://localhost:8000/api/admin/guru", { headers }),
+          fetch("http://localhost:8000/api/admin/periode", { headers }),
+        ]);
+
+        const [jsonP, jsonS, jsonD, jsonG, jsonPer] = await Promise.all([
+          resP.json(), resS.json(), resD.json(), resG.json(), resPer.json()
+        ]);
+
+        setPenempatanList(jsonP.data || []);
+        setSiswaList(jsonS.data || []);
+        setDudiList(jsonD.data || []);
+        setGuruList(jsonG.data || []);
+        setPeriodeList(jsonPer.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadAllData();
   }, []);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -218,35 +197,56 @@ export default function PenempatanPage() {
       setShowDetailModal(false);
       setForm(emptyForm);
       setIsEditMode(false);
-    } catch (err) {
+      pushToast("success", isEditMode ? "Penempatan berhasil diperbarui!" : "Penempatan berhasil ditambahkan!");
+    } catch (err: any) {
       console.error(err);
-      alert("Error: " + (err as Error).message);
+      pushToast("error", err.message);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus penempatan ini?")) return;
+  const handleDelete = async () => {
+    if (!selectedPenempatan) return;
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/api/admin/penempatan/${id}`, {
+      const res = await fetch(`http://localhost:8000/api/admin/penempatan/${selectedPenempatan.id_penempatan}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Gagal menghapus");
+      if (!res.ok) throw new Error("Gagal menghapus penempatan");
 
       fetchPenempatan();
-    } catch (err) {
+      setShowConfirmDelete(false);
+      setShowDetailModal(false);
+      pushToast("success", "Penempatan berhasil dihapus!");
+    } catch (err: any) {
       console.error(err);
-      alert("Error: " + (err as Error).message);
+      pushToast("error", err.message);
     }
   };
 
-  const data = penempatanList;
-  const totalPages = Math.ceil(data.length / DATA_PER_PAGE);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredData = penempatanList.filter((item) => {
+    const matchSearch =
+      !normalizedSearch ||
+      (item.siswa?.nama_siswa || "").toLowerCase().includes(normalizedSearch) ||
+      (item.dudi?.nama_dudi || "").toLowerCase().includes(normalizedSearch) ||
+      (item.guru?.nama_guru || "").toLowerCase().includes(normalizedSearch);
+
+    const matchFilter = filterPeriode === "all" || item.id_periode.toString() === filterPeriode;
+
+    return matchSearch && matchFilter;
+  });
+
+  const totalPages = Math.ceil(filteredData.length / DATA_PER_PAGE);
   const start = (page - 1) * DATA_PER_PAGE;
-  const currentData = data.slice(start, start + DATA_PER_PAGE);
+  const currentData = filteredData.slice(start, start + DATA_PER_PAGE);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  // Reset page to 1 when searching or filtering
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterPeriode]);
 
   if (!user) return <div>Loading...</div>;
 
@@ -270,6 +270,20 @@ export default function PenempatanPage() {
               Tambah <span className="text-lg">+</span>
             </button>
 
+            <div className="mb-4">
+              <SearchFilter
+                search={search}
+                onSearchChange={setSearch}
+                filter={filterPeriode}
+                onFilterChange={setFilterPeriode}
+                filterOptions={[
+                  { value: "all", label: "Semua Periode" },
+                  ...periodeList.map((p) => ({ value: p.id_periode.toString(), label: p.nama_periode }))
+                ]}
+                placeholder="Cari"
+              />
+            </div>
+
             {/* TABLE */}
             <div className="overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
               <Table hoverable className="text-sm font-inter">
@@ -285,7 +299,14 @@ export default function PenempatanPage() {
                 </TableHead>
 
                 <TableBody className="divide-y">
-                  {currentData.map((item, index) => (
+                  {currentData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                        Tidak ada data penempatan
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentData.map((item, index) => (
                     <TableRow
                       key={item.id_penempatan}
                       className="bg-white dark:border-gray-700 dark:bg-gray-800"
@@ -306,13 +327,14 @@ export default function PenempatanPage() {
                         </button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                  )}
                 </TableBody>
               </Table>
             </div>
 
             {/* PAGINATION */}
-            {totalPages > 1 && (
+            {totalPages > 0 && (
               <div className="mt-auto pt-6 flex justify-center gap-2 text-sm font-inter">
                 <button
                   onClick={() => setPage(page - 1)}
@@ -345,6 +367,9 @@ export default function PenempatanPage() {
             )}
           </div>
         </div>
+        
+        {/* TOAST */}
+        <Toast items={toasts} onRemove={removeToast} />
       </main>
 
       {/* Modal Tambah/Edit */}
@@ -368,7 +393,7 @@ export default function PenempatanPage() {
                   <option value="">Pilih Siswa</option>
                   {siswaList.map((siswa) => (
                     <option key={siswa.id_siswa} value={siswa.id_siswa}>
-                      {siswa.nama_siswa} - {siswa.kelas?.tingkat_kelas}{siswa.kelas?.rombel} {siswa.kelas?.jurusan?.nama_jurusan}
+                      {siswa.nama_siswa} - {siswa.kelas?.tingkat_kelas} {siswa.kelas?.jurusan?.nama_jurusan} {siswa.kelas?.rombel}
                     </option>
                   ))}
                 </Select>
@@ -470,7 +495,7 @@ export default function PenempatanPage() {
                     <option value="">Pilih Siswa</option>
                     {siswaList.map((siswa) => (
                       <option key={siswa.id_siswa} value={siswa.id_siswa}>
-                        {siswa.nama_siswa} - {siswa.kelas?.tingkat_kelas}{siswa.kelas?.rombel} {siswa.kelas?.jurusan?.nama_jurusan}
+                        {siswa.nama_siswa} - {siswa.kelas?.tingkat_kelas} {siswa.kelas?.jurusan?.nama_jurusan} {siswa.kelas?.rombel}
                       </option>
                     ))}
                   </Select>
@@ -547,10 +572,8 @@ export default function PenempatanPage() {
                 Edit
               </Button>
               <Button color="red" onClick={() => {
-                if (selectedPenempatan) {
-                  handleDelete(selectedPenempatan.id_penempatan);
-                  setShowDetailModal(false);
-                }
+                setShowDetailModal(false);
+                setShowConfirmDelete(true);
               }}>
                 Hapus
               </Button>
@@ -571,6 +594,29 @@ export default function PenempatanPage() {
               </Button>
             </>
           )}
+        </ModalFooter>
+      </Modal>
+
+      {/* ===== MODAL KONFIRMASI HAPUS ===== */}
+      <Modal dismissible show={showConfirmDelete} size="sm" onClose={() => setShowConfirmDelete(false)}>
+        <ModalHeader className="px-6 py-4 border-b border-gray-200">Konfirmasi Hapus</ModalHeader>
+        <ModalBody className="px-6 py-4">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-700 font-inter">
+              Apakah Anda yakin ingin menghapus penempatan untuk siswa{" "}
+              <span className="font-semibold text-gray-900">{selectedPenempatan?.siswa?.nama_siswa}</span>?
+            </p>
+            <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
+          </div>
+        </ModalBody>
+        <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
+          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>Batal</Button>
+          <Button color="red" onClick={handleDelete}>Ya, Hapus</Button>
         </ModalFooter>
       </Modal>
     </div>

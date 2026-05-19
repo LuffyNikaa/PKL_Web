@@ -13,7 +13,7 @@ class MonitoringController extends Controller
     // GET /api/admin/monitoring
     public function index(Request $request)
     {
-        $query = Monitoring::with(['penempatan.siswa', 'penempatan.dudi', 'penempatan.guru']);
+        $query = Monitoring::with(['penempatan.siswa.kelas.jurusan', 'penempatan.dudi', 'penempatan.guru']);
 
         if ($request->filled('nama')) {
             $query->whereHas('penempatan.siswa', fn($q) =>
@@ -183,10 +183,18 @@ class MonitoringController extends Controller
         $dudi  = $m->penempatan?->dudi;
         $guru  = $m->penempatan?->guru;
         
+        $tingkat = $siswa?->kelas?->tingkat_kelas ?? '';
+        $jurusan = $siswa?->kelas?->jurusan?->singkatan_jurusan ?? $siswa?->kelas?->jurusan?->nama_jurusan ?? '';
+        $rombel  = $siswa?->kelas?->rombel ?? '';
+        $kelasFormatted = trim("$tingkat $jurusan $rombel");
+        if (empty($kelasFormatted)) {
+            $kelasFormatted = '-';
+        }
+        
         return [
             'id_monitoring'  => $m->id_monitoring,
             'nama_siswa'     => $siswa?->nama_siswa ?? '-',
-            'kelas_siswa'    => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+            'kelas_siswa'    => $kelasFormatted,
             'jurusan_siswa'  => $siswa?->kelas?->jurusan?->nama_jurusan ?? '-',
             'tempat_pkl'     => $dudi?->nama_dudi ?? '-',
             'nama_guru'      => $guru?->nama_guru ?? '-',

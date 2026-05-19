@@ -29,6 +29,7 @@ type Siswa = {
   kelas: string;
   jurusan_siswa: string;
   dudi?: { nama_dudi: string };
+  periode?: { nama_periode: string };
 };
 
 type RekapItem = {
@@ -63,6 +64,7 @@ export default function DataJurnalMingguanPage() {
   const [rekapData, setRekapData]         = useState<RekapItem[]>([]);
   const [rekapLoading, setRekapLoading]   = useState(false);
   const [searchSiswa, setSearchSiswa]     = useState("");
+  const [generating, setGenerating]       = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -98,9 +100,10 @@ export default function DataJurnalMingguanPage() {
       const siswaFormatted = (json.data || []).map((s: any) => ({
         id_siswa: s.id_siswa,
         nama_siswa: s.nama_siswa,
-        kelas: s.kelas ? `${s.kelas.tingkat_kelas} ${s.kelas.rombel}` : '-',
+        kelas: s.kelas ? `${s.kelas.tingkat_kelas} ${s.kelas.jurusan?.nama_jurusan || ''} ${s.kelas.rombel}`.replace(/\s+/g, ' ').trim() : '-',
         jurusan_siswa: s.kelas?.jurusan?.nama_jurusan || '-',
-        dudi: s.penempatan?.[0]?.dudi || null,
+        dudi: s.dudi || null,
+        periode: s.periode || null,
       }));
       setSiswaList(siswaFormatted);
     } catch (err) { console.error(err); }
@@ -155,111 +158,187 @@ export default function DataJurnalMingguanPage() {
   );
 
   // Generate PDF
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (!selectedSiswa || rekapData.length === 0) return;
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    const now = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+    setGenerating(true);
 
-    // Header
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 0, pageW, 32, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16); doc.setFont("helvetica", "bold");
-    doc.text("REKAP JURNAL MINGGUAN PKL", pageW / 2, 14, { align: "center" });
-    doc.setFontSize(9); doc.setFont("helvetica", "normal");
-    doc.text("Sistem Informasi PKL", pageW / 2, 22, { align: "center" });
-    doc.text(`Dicetak: ${now}`, pageW / 2, 28, { align: "center" });
+    try {
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const now = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 
-    // Info siswa
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text("Informasi Siswa", 14, 44);
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
-    doc.line(14, 46, pageW - 14, 46);
+      // Preload semua gambar ke base64 secara paralel
+      const preloadedImages: { [key: number]: string | null } = {};
+      await Promise.all(
+        rekapData.map(async (r) => {
+          if (r.dokumentasi) {
+            if (r.dokumentasi.startsWith("data:")) {
+              // Jika data sudah dalam format base64 dari backend, langsung pakai tanpa fetch!
+              preloadedImages[r.minggu_ke] = r.dokumentasi;
+            } else {
+              try {
+                const res = await fetch(r.dokumentasi);
+                const blob = await res.blob();
+                const base64 = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(blob);
+                });
+                preloadedImages[r.minggu_ke] = base64;
+              } catch (e) {
+                console.error("Gagal memuat gambar untuk minggu ke-", r.minggu_ke, e);
+                preloadedImages[r.minggu_ke] = null;
+              }
+            }
+          } else {
+            preloadedImages[r.minggu_ke] = null;
+          }
+        })
+      );
 
-    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    const infoKiri = [
-      ["Nama Siswa", selectedSiswa.nama_siswa],
-      ["Kelas",      selectedSiswa.kelas],
-      ["Jurusan",    selectedSiswa.jurusan_siswa],
-    ];
-    const infoKanan = [
-      ["Tempat PKL",    selectedSiswa.dudi?.nama_dudi ?? "-"],
-      ["Total Minggu",  `${rekapData.length} minggu`],
-      ["Periode",       rekapData.length > 0
-        ? `${rekapData[0].range_tanggal.split(" s/d ")[0]} s/d ${rekapData[rekapData.length - 1].range_tanggal.split(" s/d ")[1]}`
-        : "-"],
-    ];
+      const drawFotoPlaceholder = (d: typeof doc, x: number, y: number, w: number, h: number) => {
+        d.setDrawColor(220, 220, 220);
+        d.setFillColor(248, 250, 252);
+        d.rect(x, y, w, h, "FD");
+        d.setFontSize(8); d.setTextColor(150); d.setFont("helvetica", "normal");
+        d.text("Tempel Foto Dokumentasi Di Sini", x + w / 2, y + h / 2 - 2, { align: "center" });
+        d.setFontSize(7);
+        d.text("(Atau upload melalui aplikasi agar otomatis tercetak)", x + w / 2, y + h / 2 + 3, { align: "center" });
+      };
 
-    let y = 52;
-    infoKiri.forEach(([label, value]) => {
-      doc.setFont("helvetica", "bold"); doc.text(label, 14, y);
-      doc.setFont("helvetica", "normal"); doc.text(`: ${value}`, 50, y);
-      y += 7;
-    });
-    y = 52;
-    infoKanan.forEach(([label, value]) => {
-      doc.setFont("helvetica", "bold"); doc.text(label, pageW / 2, y);
-      doc.setFont("helvetica", "normal"); doc.text(`: ${value}`, pageW / 2 + 32, y);
-      y += 7;
-    });
+      rekapData.forEach((r, idx) => {
+        if (idx > 0) {
+          doc.addPage();
+        }
 
-    // Summary
-    const sumY = 80;
-    doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text("Ringkasan", 14, sumY);
-    doc.line(14, sumY + 2, pageW - 14, sumY + 2);
+        // ===== HEADER (KOP SURAT RESMI) =====
+        doc.setTextColor(20, 20, 20);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("LAPORAN JURNAL MINGGUAN PRAKTEK KERJA LAPANGAN (PKL)", pageW / 2, 14, { align: "center" });
 
-    const boxW = (pageW - 28 - 6) / 3;
-    const boxes = [
-      { label: "Total Minggu",   value: String(rekapData.length),       r: 200, g: 200, b: 200, tr: 50,  tg: 50,  tb: 50  },
-      { label: "Minggu Pertama", value: rekapData[0]?.range_tanggal.split(" s/d ")[0] ?? "-", r: 187, g: 247, b: 208, tr: 22,  tg: 101, tb: 52  },
-      { label: "Minggu Terakhir",value: rekapData[rekapData.length - 1]?.range_tanggal.split(" s/d ")[1] ?? "-", r: 191, g: 219, b: 254, tr: 29,  tg: 78,  tb: 216 },
-    ];
-    boxes.forEach((box, i) => {
-      const bx = 14 + i * (boxW + 3);
-      const by = sumY + 5;
-      doc.setFillColor(box.r, box.g, box.b);
-      doc.roundedRect(bx, by, boxW, 18, 2, 2, "F");
-      doc.setTextColor(box.tr, box.tg, box.tb);
-      doc.setFontSize(9); doc.setFont("helvetica", "bold");
-      doc.text(box.value, bx + boxW / 2, by + 10, { align: "center" });
-      doc.setFontSize(8); doc.setFont("helvetica", "normal");
-      doc.text(box.label, bx + boxW / 2, by + 15.5, { align: "center" });
-    });
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("SISTEM INFORMASI PKL - MONITORING JURNAL SISWA", pageW / 2, 19, { align: "center" });
+        
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Tanggal Cetak: ${now}`, pageW / 2, 24, { align: "center" });
 
-    // Tabel
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text("Riwayat Jurnal Mingguan", 14, sumY + 32);
+        // Double line below header (Kop border)
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.6);
+        doc.line(14, 27, pageW - 14, 27);
+        doc.setLineWidth(0.2);
+        doc.line(14, 28, pageW - 14, 28);
 
-    autoTable(doc, {
-      startY: sumY + 35,
-      head: [["No", "Minggu ke-", "Periode", "Kegiatan"]],
-      body: rekapData.map((r, idx) => [idx + 1, `Minggu ke-${r.minggu_ke}`, r.range_tanggal, r.kegiatan]),
-      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      bodyStyles: { fontSize: 9 },
-      alternateRowStyles: { fillColor: [245, 247, 255] },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 24 },
-        2: { cellWidth: 40 },
-        3: { cellWidth: "auto" },
-      },
-      margin: { left: 14, right: 14 },
-    });
+        // ===== INFO SISWA (DUAL COLUMN) =====
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(9);
+        
+        // Kiri
+        doc.setFont("helvetica", "bold"); doc.text("Nama Siswa", 14, 34);
+        doc.setFont("helvetica", "normal"); doc.text(`: ${selectedSiswa.nama_siswa}`, 38, 34);
+        
+        doc.setFont("helvetica", "bold"); doc.text("Kelas/Jurusan", 14, 39);
+        doc.setFont("helvetica", "normal"); doc.text(`: ${selectedSiswa.kelas} / ${selectedSiswa.jurusan_siswa}`, 38, 39);
+        
+        // Kanan
+        doc.setFont("helvetica", "bold"); doc.text("Tempat PKL", pageW / 2 + 10, 34);
+        doc.setFont("helvetica", "normal"); doc.text(`: ${selectedSiswa.dudi?.nama_dudi ?? "-"}`, pageW / 2 + 35, 34);
+        
+        doc.setFont("helvetica", "bold"); doc.text("Periode", pageW / 2 + 10, 39);
+        doc.setFont("helvetica", "normal"); doc.text(`: ${selectedSiswa.periode?.nama_periode ?? "-"}`, pageW / 2 + 35, 39);
 
-    // Footer
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8); doc.setTextColor(150); doc.setFont("helvetica", "normal");
-      doc.text(`Halaman ${i} dari ${pageCount}`, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
-      doc.text("Dokumen ini digenerate otomatis oleh Sistem Informasi PKL", pageW / 2, doc.internal.pageSize.getHeight() - 4, { align: "center" });
+        // Thin separator
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(14, 43, pageW - 14, 43);
+
+        // ===== A. LAPORAN KEGIATAN MINGGUAN =====
+        doc.setFontSize(9.5); doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 30, 30);
+        doc.text(`A. LAPORAN KEGIATAN MINGGUAN (MINGGU KE-${r.minggu_ke})`, 14, 49);
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Rentang Tanggal: ${r.range_tanggal}`, 14, 53);
+
+        // Kegiatan Box
+        const kegiatanY = 56;
+        const kegiatanH = 50;
+        doc.setDrawColor(180, 180, 180);
+        doc.setFillColor(250, 250, 252);
+        doc.rect(14, kegiatanY, pageW - 28, kegiatanH, "FD");
+
+        doc.setFontSize(9); doc.setTextColor(50, 50, 50); doc.setFont("helvetica", "normal");
+        const kegiatanLines = doc.splitTextToSize(r.kegiatan || "Tidak ada rincian kegiatan mingguan.", pageW - 34);
+        doc.text(kegiatanLines, 17, kegiatanY + 5);
+
+        // ===== B. FOTO DOKUMENTASI KEGIATAN =====
+        const fotoTitleY = kegiatanY + kegiatanH + 6;
+        doc.setFontSize(9.5); doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 30, 30);
+        doc.text("B. FOTO DOKUMENTASI KEGIATAN", 14, fotoTitleY);
+
+        const fotoY = fotoTitleY + 3;
+        const fotoW = 80;
+        const fotoH = 50;
+        const fotoX = (pageW - fotoW) / 2;
+
+        const base64Img = preloadedImages[r.minggu_ke];
+        if (base64Img) {
+          try {
+            doc.addImage(base64Img, "JPEG", fotoX, fotoY, fotoW, fotoH);
+            // Draw image border
+            doc.setDrawColor(180, 180, 180);
+            doc.rect(fotoX, fotoY, fotoW, fotoH, "S");
+          } catch (e) {
+            drawFotoPlaceholder(doc, fotoX, fotoY, fotoW, fotoH);
+          }
+        } else {
+          drawFotoPlaceholder(doc, fotoX, fotoY, fotoW, fotoH);
+        }
+
+        // ===== C. CATATAN / EVALUASI INSTRUKTUR =====
+        const catatanTitleY = fotoY + fotoH + 6;
+        doc.setFontSize(9.5); doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 30, 30);
+        doc.text("C. CATATAN / EVALUASI INSTRUKTUR DUDI", 14, catatanTitleY);
+
+        const catatanY = catatanTitleY + 3;
+        const catatanH = 22;
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(14, catatanY, pageW - 28, catatanH, "S");
+
+        // Draw horizontal ruled lines for manual writing inside comments
+        doc.setDrawColor(220, 220, 220);
+        doc.line(18, catatanY + 7, pageW - 18, catatanY + 7);
+        doc.line(18, catatanY + 14, pageW - 18, catatanY + 14);
+
+        // ===== SIGNATURE AREA =====
+        const sigY = pageH - 36;
+        doc.setFontSize(9); doc.setTextColor(30, 30, 30); doc.setFont("helvetica", "normal");
+        doc.text("Pembimbing Lapangan / Instruktur DUDI,", pageW - 75, sigY);
+        doc.text("( __________________________________ )", pageW - 75, sigY + 20);
+      });
+
+      // Footer
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8); doc.setTextColor(150); doc.setFont("helvetica", "normal");
+        doc.text(`Halaman ${i} dari ${pageCount}`, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+        doc.text("Dokumen ini digenerate otomatis oleh Sistem Informasi PKL", pageW / 2, doc.internal.pageSize.getHeight() - 4, { align: "center" });
+      }
+
+      doc.save(`Rekap_Jurnal_Mingguan_${selectedSiswa.nama_siswa.replace(/ /g, "_")}.pdf`);
+    } catch (err) {
+      console.error("Gagal membuat PDF Jurnal Mingguan:", err);
+    } finally {
+      setGenerating(false);
     }
-
-    doc.save(`Rekap_Jurnal_Mingguan_${selectedSiswa.nama_siswa.replace(/ /g, "_")}.pdf`);
   };
 
   const hasActiveFilter = activeFilter.nama || activeFilter.tanggal;
@@ -447,11 +526,11 @@ export default function DataJurnalMingguanPage() {
                         <p className="text-lg font-bold text-gray-700">{rekapData.length}</p>
                         <p className="text-xs text-gray-500">Total Jurnal</p>
                       </div>
-                      <div className="text-center p-2 bg-blue-50 rounded-lg">
-                        <p className="text-sm font-bold text-blue-600">
-                          {rekapData.length > 0 ? rekapData[0].range_tanggal : "-"}
+                      <div className="text-center p-2 bg-blue-50 rounded-lg flex flex-col justify-center">
+                        <p className="text-sm font-bold text-blue-600 truncate max-w-full">
+                          {selectedSiswa.periode?.nama_periode ?? "-"}
                         </p>
-                        <p className="text-xs text-blue-400">Jurnal Pertama</p>
+                        <p className="text-xs text-blue-400">Periode PKL</p>
                       </div>
                     </div>
 
@@ -463,15 +542,18 @@ export default function DataJurnalMingguanPage() {
                         <table className="w-full text-xs">
                           <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                              <th className="px-3 py-2 text-left text-gray-600 font-medium">Tanggal</th>
+                              <th className="px-3 py-2 text-left text-gray-600 font-medium">Minggu Ke</th>
                               <th className="px-3 py-2 text-left text-gray-600 font-medium">Kegiatan</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {rekapData.map((r) => (
                               <tr key={r.minggu_ke} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-gray-700 whitespace-nowrap font-medium">{r.range_tanggal}</td>
-                                <td className="px-3 py-2 text-gray-600">{r.kegiatan}</td>
+                                <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                                  <div className="font-semibold text-gray-900">Minggu ke-{r.minggu_ke}</div>
+                                  <div className="text-[10px] text-gray-500 mt-0.5">{r.range_tanggal}</div>
+                                </td>
+                                <td className="px-3 py-3 text-gray-600">{r.kegiatan}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -484,17 +566,17 @@ export default function DataJurnalMingguanPage() {
             </div>
           </ModalBody>
           <ModalFooter className="px-6 py-4 border-t border-gray-200 flex justify-between">
-            <Button color="blue" onClick={generatePDF} disabled={!selectedSiswa || rekapData.length === 0}>
-              📄 Cetak PDF
+            <Button color="blue" onClick={generatePDF} disabled={!selectedSiswa || rekapData.length === 0 || generating}>
+              {generating ? "⏳ Memproses PDF..." : "📄 Cetak PDF"}
             </Button>
-            <Button color="gray" onClick={() => setShowRekap(false)}>Tutup</Button>
+            <Button color="gray" onClick={() => setShowRekap(false)} disabled={generating}>Tutup</Button>
           </ModalFooter>
         </Modal>
 
         {/* ===== MODAL DETAIL ===== */}
         <Modal dismissible show={showDetail} size="4xl" onClose={() => { setShowDetail(false); setSelected(null); }}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">Detail Jurnal Mingguan</ModalHeader>
-          <ModalBody className="px-6 py-4">
+          <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
             {selected && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
