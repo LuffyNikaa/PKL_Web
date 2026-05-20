@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const handleLogin = async ( e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     try {
       const res = await fetch('http://localhost:8000/api/login/web', {
@@ -37,51 +37,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-orange-400">
-      {/* KIRI */}
-      <div className="w-3/5 flex flex-col justify-center items-center text-white">
-        <img src="/gambar/logo.png" className="w-70" />
-        <p className="text-2xl font-bold text-center">
-          Selamat Datang <br/> Silahkan Login
-        </p>
-      </div>
+    <div className="min-h-screen w-full flex justify-center items-center bg-[#FAF5ED]">
+      <div className="w-[450px] bg-white p-12 shadow-sm border border-gray-100 rounded-sm">
+        <h2 className="text-[38px] font-bold text-black text-center mb-8 font-inter tracking-tight">
+          Login
+        </h2>
 
-      {/* KANAN */}
-      <div className="w-2/5 flex justify-center items-center">
-        <form
-          onSubmit={handleLogin}
-          className="w-[420px] rounded-3xl p-10 bg-white/20 backdrop-blur-lg border border-white/30 shadow-xl"
-        >
-          <h2 className="text-black text-2xl font-bold text-center mb-8">
-            Login Ke Akun Anda
-          </h2>
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-700 bg-red-50 rounded-lg text-center font-medium font-inter">
+            {error}
+          </div>
+        )}
 
-          {error && (
-            <p className="text-red-700 text-center font-semibold mb-4">{error}</p>
-          )}
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label className="block text-[14px] font-semibold text-black mb-2 font-inter">
+              Email:
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-400 rounded-lg text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-inter text-sm"
+              placeholder="nama@example.com"
+              required
+            />
+          </div>
 
-          <label className="text-white">Email</label>
-          <input
-            type="email"
-            className="w-full mt-2 mb-4 px-5 py-3 rounded-full outline-none bg-white text-gray-800 placeholder-gray-400"
-            placeholder="Masukkan email Anda"
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <div>
+            <label className="block text-[14px] font-semibold text-black mb-2 font-inter">
+              Password:
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-400 rounded-lg text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-inter text-sm"
+              placeholder="........."
+              required
+            />
+          </div>
 
-          <label className="text-white">Password</label>
-          <input
-            type="password"
-            className="w-full mt-2 mb-6 px-5 py-3 rounded-full outline-none bg-white text-gray-800 placeholder-gray-400"
-            placeholder="Masukkan password Anda"
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button className="w-full bg-yellow-400 hover:bg-yellow-300 py-3 rounded-full font-bold text-lg">
+          <button
+            type="submit"
+            className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3 rounded-lg font-semibold text-[15px] font-inter mt-6 tracking-wide transition duration-200"
+          >
             Masuk
           </button>
         </form>
       </div>
-
     </div>
   )
 }

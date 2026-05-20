@@ -103,23 +103,22 @@ export default function MonitoringPage() {
       });
       const json = await res.json();
       
-      // Format siswa dengan kelas yang benar
+      // Format siswa dengan kelas yang benar (contoh: X TKJ 1)
       const siswaFormatted = (json.data || []).map((s: any) => {
         let kelas = '-';
-        let jurusan = '-';
         
         if (s.kelas) {
-          kelas = `${s.kelas.tingkat_kelas || ''} ${s.kelas.rombel || ''}`.trim();
-          if (s.kelas.jurusan) {
-            jurusan = s.kelas.jurusan.nama_jurusan || '-';
-          }
+          const tingkat = s.kelas.tingkat_kelas || '';
+          const jurusanSingkatan = s.kelas.jurusan?.singkatan_jurusan || s.kelas.jurusan?.nama_jurusan || '';
+          const rombel = s.kelas.rombel || '';
+          kelas = `${tingkat} ${jurusanSingkatan} ${rombel}`.replace(/\s+/g, ' ').trim() || '-';
         }
         
         return {
           id_siswa: s.id_siswa,
           nama_siswa: s.nama_siswa,
           kelas: kelas,
-          jurusan: jurusan,
+          jurusan: '',
         };
       });
       
@@ -407,7 +406,7 @@ export default function MonitoringPage() {
                       <Label>Siswa <span className="text-red-500">*</span></Label>
                       <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1">
                         <option value="">Pilih siswa...</option>
-                        {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas} {s.jurusan}</option>)}
+                        {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas}</option>)}
                       </Select>
                     </div>
                   ) : (
