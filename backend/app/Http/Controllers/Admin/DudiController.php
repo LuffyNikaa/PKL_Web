@@ -14,7 +14,7 @@ class DudiController extends Controller
     // =====================
     public function index()
     {
-        $dudi = Dudi::all();
+        $dudi = Dudi::orderBy('id_dudi', 'desc')->get();
 
         return response()->json([
             'data' => $dudi

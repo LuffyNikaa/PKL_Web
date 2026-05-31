@@ -30,7 +30,9 @@ class JurnalMingguanWebController extends Controller
             ]);
         }
 
-        $jurnal = $query->orderBy('tanggal_jurnal_mingguan', 'desc')->get();
+        $jurnal = $query->orderBy('tanggal_jurnal_mingguan', 'desc')
+                        ->orderBy('id_jurnal_mingguan', 'desc')
+                        ->get();
 
         return response()->json([
             'data' => $jurnal->map(function ($j) {

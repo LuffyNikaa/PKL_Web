@@ -163,7 +163,8 @@ export default function DataSiswaPage() {
     }));
   };
 
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     // Validasi dasar
     if (!form.nama_siswa || !form.email || !form.password || !form.id_kelas) {
       pushToast("error", "Mohon lengkapi semua field yang wajib!");
@@ -280,7 +281,8 @@ export default function DataSiswaPage() {
     }
   };
 
-  const handleUpdateSiswa = async () => {
+  const handleUpdateSiswa = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!selectedSiswa) return;
 
     try {
@@ -530,7 +532,7 @@ export default function DataSiswaPage() {
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Siswa</ModalHeader>
 
         <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
-          <form className="flex flex-col gap-4">
+          <form id="add-siswa-form" className="flex flex-col gap-4" onSubmit={handleSimpan}>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-5">
                 <div>
@@ -653,7 +655,7 @@ export default function DataSiswaPage() {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button onClick={handleSimpan} color="blue">
+          <Button form="add-siswa-form" type="submit" color="blue">
             Simpan
           </Button>
           <Button onClick={() => { setShowModal(false); setSelectedJurusanForm(""); }} color="red">
@@ -676,7 +678,7 @@ export default function DataSiswaPage() {
         <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           {selectedSiswa && (
             <>
-              <form className="flex flex-col gap-4">
+              <form id="edit-siswa-form" className="flex flex-col gap-4" onSubmit={handleUpdateSiswa}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-5">
                     <div>
@@ -815,9 +817,9 @@ export default function DataSiswaPage() {
                 Hapus
               </Button>
             </>
-          ) : (
+              ) : (
             <>
-              <Button onClick={handleUpdateSiswa} color="blue">
+              <Button form="edit-siswa-form" type="submit" color="blue">
                 Simpan
               </Button>
               <Button

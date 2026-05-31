@@ -110,7 +110,8 @@ const [showConfirmDelete, setShowConfirmDelete] = useState(false)
 };
 
 
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/api/admin/guru", {
@@ -196,7 +197,8 @@ const handleDeleteGuru = async () => {
 };
 
 // Update handleSimpan untuk edit
-const handleUpdateGuru = async () => {
+const handleUpdateGuru = async (e?: React.FormEvent) => {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
   if (!selectedGuru) return;
 
   try {
@@ -374,7 +376,7 @@ const handleUpdateGuru = async () => {
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Guru</ModalHeader>
 
         <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
-          <form className="space-y-4">
+          <form id="add-guru-form" className="space-y-4" onSubmit={handleSimpan}>
             {/* Baris 1: 2 kolom */}
             <div className="grid grid-cols-2 gap-4">
               {/* Kolom Kiri */}
@@ -529,7 +531,7 @@ const handleUpdateGuru = async () => {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button onClick={handleSimpan} color="blue">
+          <Button form="add-guru-form" type="submit" color="blue">
             Simpan
           </Button>
           <Button onClick={() => setShowModal(false)} color="red">
@@ -551,7 +553,7 @@ const handleUpdateGuru = async () => {
 
         <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
           {selectedGuru && (
-          <form className="space-y-4">
+          <form id="edit-guru-form" className="space-y-4" onSubmit={handleUpdateGuru}>
             {/* Baris atas: 3 kiri + 3 kanan */}
             <div className="grid grid-cols-2 gap-4">
               {/* Kolom Kiri: Nama, NIP, No.HP */}
@@ -678,9 +680,9 @@ const handleUpdateGuru = async () => {
                 Hapus
               </Button>
             </>
-            ) : (
+              ) : (
             <>
-              <Button color="blue" onClick={handleUpdateGuru}>
+              <Button form="edit-guru-form" type="submit" color="blue">
                 Simpan
               </Button>
               <Button

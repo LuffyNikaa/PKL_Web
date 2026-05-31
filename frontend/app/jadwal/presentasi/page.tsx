@@ -152,7 +152,8 @@ export default function PresentasiPage() {
     setShowTambah(true);
   };
 
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
@@ -377,33 +378,33 @@ export default function PresentasiPage() {
         <Modal dismissible show={showTambah} size="4xl" onClose={() => setShowTambah(false)}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">{isEdit ? "Edit Jadwal Presentasi" : "Tambah Jadwal Presentasi"}</ModalHeader>
           <ModalBody className="px-6 py-4">
-            <form className="space-y-4">
-              {!isEdit && (
-                <div>
-                  <Label>Siswa <span className="text-red-500">*</span></Label>
-                  <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1">
-                    <option value="">Pilih siswa...</option>
-                    {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas}</option>)}
-                  </Select>
-                </div>
-              )}
+            <form id="presentasi-form" onSubmit={handleSimpan} className="space-y-4">
+                {!isEdit && (
+                  <div>
+                    <Label>Siswa <span className="text-red-500">*</span></Label>
+                    <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1" required>
+                      <option value="">Pilih siswa...</option>
+                      {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas}</option>)}
+                    </Select>
+                  </div>
+                )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Tanggal <span className="text-red-500">*</span></Label>
-                  <TextInput type="date" name="tanggal_presentasi" value={form.tanggal_presentasi} onChange={handleChange} className="mt-1"/>
+                  <TextInput type="date" name="tanggal_presentasi" value={form.tanggal_presentasi} onChange={handleChange} className="mt-1" required/>
                 </div>
                 <div>
                   <Label>Jam <span className="text-red-500">*</span></Label>
-                  <TextInput type="time" name="jam_presentasi" value={form.jam_presentasi} onChange={handleChange} className="mt-1"/>
+                  <TextInput type="time" name="jam_presentasi" value={form.jam_presentasi} onChange={handleChange} className="mt-1" required/>
                 </div>
               </div>
               <div>
                 <Label>Ruangan <span className="text-red-500">*</span></Label>
-                <TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Masukkan lokasi presentasi" className="mt-1"/>
+                <TextInput name="ruangan_presentasi" value={form.ruangan_presentasi} onChange={handleChange} placeholder="Masukkan lokasi presentasi" className="mt-1" required/>
               </div>
               <div>
                 <Label>Status <span className="text-red-500">*</span></Label>
-                <Select name="status_presentasi" value={form.status_presentasi} onChange={handleChange} className="mt-1">
+                <Select name="status_presentasi" value={form.status_presentasi} onChange={handleChange} className="mt-1" required>
                   <option value="dijadwalkan">Dijadwalkan</option>
                   <option value="selesai">Selesai</option>
                 </Select>
@@ -411,7 +412,7 @@ export default function PresentasiPage() {
             </form>
           </ModalBody>
           <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-            <Button color="blue" onClick={handleSimpan} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
+            <Button form="presentasi-form" type="submit" color="blue" disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
             <Button color="red" onClick={() => setShowTambah(false)}>Batal</Button>
           </ModalFooter>
         </Modal>

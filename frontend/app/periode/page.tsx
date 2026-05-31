@@ -137,7 +137,8 @@ export default function PeriodePage() {
     }
   };
 
-  const handleSimpanPeriode = async () => {
+  const handleSimpanPeriode = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -163,7 +164,8 @@ export default function PeriodePage() {
     }
   };
 
-  const handleUpdatePeriode = async () => {
+  const handleUpdatePeriode = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!selectedPeriode) return;
 
     try {
@@ -348,7 +350,7 @@ export default function PeriodePage() {
       <Modal dismissible show={showModal} size="md" onClose={() => setShowModal(false)}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Periode</ModalHeader>
         <ModalBody className="px-6 py-4">
-          <form className="grid grid-cols-1 gap-4">
+          <form id="add-periode-form" className="grid grid-cols-1 gap-4" onSubmit={handleSimpanPeriode}>
             <div>
               <Label htmlFor="nama_periode">Nama Periode</Label>
               <TextInput
@@ -397,7 +399,7 @@ export default function PeriodePage() {
           </form>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button onClick={handleSimpanPeriode} color="blue">
+          <Button form="add-periode-form" type="submit" color="blue"> 
             Simpan
           </Button>
           <Button color="red" onClick={() => setShowModal(false)}>
@@ -412,7 +414,7 @@ export default function PeriodePage() {
           {isEditMode ? "Edit Data Periode" : "Detail Data Periode"}
         </ModalHeader>
         <ModalBody className="px-6 py-4">
-          <form className="grid grid-cols-1 gap-4">
+          <form id="edit-periode-form" className="grid grid-cols-1 gap-4" onSubmit={handleUpdatePeriode}>
             <div>
               <Label htmlFor="detail_nama_periode">Nama Periode</Label>
               <TextInput
@@ -474,9 +476,9 @@ export default function PeriodePage() {
                 Hapus
               </Button>
             </>
-          ) : (
+              ) : (
             <>
-              <Button color="blue" onClick={handleUpdatePeriode}>
+              <Button form="edit-periode-form" type="submit" color="blue">
                 Simpan
               </Button>
               <Button color="red" onClick={() => setIsEditMode(false)}>

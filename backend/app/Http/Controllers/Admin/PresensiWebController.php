@@ -38,7 +38,9 @@ class PresensiWebController extends Controller
             });
         }
 
-        $presensi = $query->orderBy('tanggal_absensi', 'desc')->get();
+        $presensi = $query->orderBy('tanggal_absensi', 'desc')
+                          ->orderBy('id_absensi', 'desc')
+                          ->get();
 
         return response()->json([
             'data' => $presensi->map(function ($p) {

@@ -145,7 +145,8 @@ export default function DataKelasPage() {
     });
   };
 
-  const handleTambahJurusan = async () => {
+  const handleTambahJurusan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/api/admin/jurusan", {
@@ -169,7 +170,8 @@ export default function DataKelasPage() {
     }
   };
 
-  const handleTambahKelas = async () => {
+  const handleTambahKelas = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
       if (!kelasForm.tingkat_kelas || !kelasForm.rombel || !kelasForm.id_jurusan) {
         pushToast("error", "Semua field wajib diisi");
@@ -199,7 +201,8 @@ export default function DataKelasPage() {
     }
   };
 
-  const handleUpdateJurusan = async () => {
+  const handleUpdateJurusan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!selectedJurusan) return;
 
     try {
@@ -229,7 +232,8 @@ export default function DataKelasPage() {
     }
   };
 
-  const handleUpdateKelas = async () => {
+  const handleUpdateKelas = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!selectedKelas) return;
 
     try {
@@ -566,78 +570,78 @@ export default function DataKelasPage() {
       {/* ================= MODAL JURUSAN ================= */}
       <Modal dismissible show={showJurusanModal} size="md" onClose={() => setShowJurusanModal(false)}>
         <ModalHeader>{isEditJurusan ? "Edit Jurusan" : "Tambah Jurusan"}</ModalHeader>
-        <ModalBody>
-          <div>
-            <Label>Nama Jurusan</Label>
-            <TextInput
-              name="nama_jurusan"
-              value={jurusanForm.nama_jurusan}
-              onChange={handleJurusanChange}
-              placeholder="Masukkan nama jurusan"
-            />
-          </div>
-        </ModalBody>
-        <ModalFooter className="flex justify-between">
-          <Button color="blue" onClick={isEditJurusan ? handleUpdateJurusan : handleTambahJurusan}>
-            Simpan
-          </Button>
-          <Button color="red" onClick={() => setShowJurusanModal(false)}>
-            Batal
-          </Button>
-        </ModalFooter>
+          <ModalBody>
+            <form id="jurusan-form" onSubmit={isEditJurusan ? handleUpdateJurusan : handleTambahJurusan}>
+              <div>
+                <Label>Nama Jurusan</Label>
+                <TextInput
+                  name="nama_jurusan"
+                  value={jurusanForm.nama_jurusan}
+                  onChange={handleJurusanChange}
+                  placeholder="Masukkan nama jurusan"
+                  required
+                />
+              </div>
+            </form>
+          </ModalBody>
+          <ModalFooter className="flex justify-between">
+            <Button form="jurusan-form" type="submit" color="blue">Simpan</Button>
+            <Button color="red" onClick={() => setShowJurusanModal(false)}>Batal</Button>
+          </ModalFooter>
       </Modal>
 
       {/* ================= MODAL KELAS ================= */}
       <Modal dismissible show={showKelasModal} size="xl" onClose={() => setShowKelasModal(false)}>
         <ModalHeader>{isEditKelas ? "Edit Kelas" : "Tambah Kelas"}</ModalHeader>
         <ModalBody>
-          <div className="space-y-4">
-            <div>
-              <Label>Tingkat Kelas</Label>
-              <Select
-                name="tingkat_kelas"
-                value={kelasForm.tingkat_kelas}
-                onChange={handleKelasChange}
-              >
-                <option value="">Pilih Tingkat</option>
-                <option value="X">X</option>
-                <option value="XI">XI</option>
-                <option value="XII">XII</option>
-              </Select>
+          <form id="kelas-form" onSubmit={isEditKelas ? handleUpdateKelas : handleTambahKelas}>
+            <div className="space-y-4">
+              <div>
+                <Label>Tingkat Kelas</Label>
+                <Select
+                  name="tingkat_kelas"
+                  value={kelasForm.tingkat_kelas}
+                  onChange={handleKelasChange}
+                  required
+                >
+                  <option value="">Pilih Tingkat</option>
+                  <option value="X">X</option>
+                  <option value="XI">XI</option>
+                  <option value="XII">XII</option>
+                </Select>
+              </div>
+              <div>
+                <Label>Jurusan</Label>
+                <Select
+                  name="id_jurusan"
+                  value={kelasForm.id_jurusan}
+                  onChange={handleKelasChange}
+                  required
+                >
+                  <option value="">Pilih Jurusan</option>
+                  {jurusanList.map((jurusan) => (
+                    <option key={jurusan.id_jurusan} value={jurusan.id_jurusan}>
+                      {jurusan.nama_jurusan}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Rombel</Label>
+                <TextInput
+                  name="rombel"
+                  value={kelasForm.rombel}
+                  onChange={handleKelasChange}
+                  placeholder="Contoh: 1"
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label>Jurusan</Label>
-              <Select
-                name="id_jurusan"
-                value={kelasForm.id_jurusan}
-                onChange={handleKelasChange}
-              >
-                <option value="">Pilih Jurusan</option>
-                {jurusanList.map((jurusan) => (
-                  <option key={jurusan.id_jurusan} value={jurusan.id_jurusan}>
-                    {jurusan.nama_jurusan}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Rombel</Label>
-              <TextInput
-                name="rombel"
-                value={kelasForm.rombel}
-                onChange={handleKelasChange}
-                placeholder="Contoh: 1"
-              />
-            </div>
-          </div>
+          </form>
         </ModalBody>
         <ModalFooter className="flex justify-between">
-          <Button color="blue" onClick={isEditKelas ? handleUpdateKelas : handleTambahKelas}>
-            Simpan
-          </Button>
-          <Button color="red" onClick={() => setShowKelasModal(false)}>
-            Batal
-          </Button>
+          <Button form="kelas-form" type="submit" color="blue">Simpan</Button>
+          <Button color="red" onClick={() => setShowKelasModal(false)}>Batal</Button>
         </ModalFooter>
       </Modal>
       {/* ================= MODAL DETAIL KELAS ================= */}

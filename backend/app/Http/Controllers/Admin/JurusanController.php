@@ -11,7 +11,7 @@ class JurusanController extends Controller
     public function index()
     {
         return response()->json([
-            'data' => Jurusan::all()
+            'data' => Jurusan::orderBy('id_jurusan', 'desc')->get()
         ]);
     }
 

@@ -157,7 +157,8 @@ export default function MonitoringPage() {
     setShowTambah(true);
   };
 
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     // Validasi input wajib
     if (!isEdit && !form.id_siswa) {
       pushToast("error", "Siswa wajib dipilih!");
@@ -397,14 +398,14 @@ export default function MonitoringPage() {
         <Modal dismissible show={showTambah} size="4xl" onClose={() => setShowTambah(false)}>
           <ModalHeader className="px-6 py-4 border-b border-gray-200">{isEdit ? "Edit Jadwal Monitoring" : "Tambah Jadwal Monitoring"}</ModalHeader>
           <ModalBody className="px-6 py-4 max-h-[65vh] overflow-y-auto">
-            <form className="space-y-4 font-inter">
+            <form id="monitoring-form" onSubmit={handleSimpan} className="space-y-4 font-inter">
               <div className="grid grid-cols-2 gap-4">
                 {/* KIRI */}
                 <div className="space-y-4">
                   {!isEdit ? (
                     <div>
                       <Label>Siswa <span className="text-red-500">*</span></Label>
-                      <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1">
+                      <Select name="id_siswa" value={form.id_siswa} onChange={handleChange} className="mt-1" required>
                         <option value="">Pilih siswa...</option>
                         {siswaList.map(s => <option key={s.id_siswa} value={s.id_siswa}>{s.nama_siswa} — {s.kelas}</option>)}
                       </Select>
@@ -415,9 +416,9 @@ export default function MonitoringPage() {
                       <TextInput value={selected?.nama_siswa || ""} readOnly className="mt-1 bg-gray-50"/>
                     </div>
                   )}
-                  <div>
+                    <div>
                     <Label>Tanggal <span className="text-red-500">*</span></Label>
-                    <TextInput type="date" name="tanggal_monitoring" value={form.tanggal_monitoring} onChange={handleChange} className="mt-1"/>
+                    <TextInput type="date" name="tanggal_monitoring" value={form.tanggal_monitoring} onChange={handleChange} className="mt-1" required/>
                   </div>
                 </div>
 
@@ -425,11 +426,11 @@ export default function MonitoringPage() {
                 <div className="space-y-4">
                   <div>
                     <Label>Jam <span className="text-red-500">*</span></Label>
-                    <TextInput type="time" name="jam_monitoring" value={form.jam_monitoring} onChange={handleChange} className="mt-1"/>
+                    <TextInput type="time" name="jam_monitoring" value={form.jam_monitoring} onChange={handleChange} className="mt-1" required/>
                   </div>
                   <div>
                     <Label>Lokasi <span className="text-red-500">*</span></Label>
-                    <TextInput name="lokasi_monitoring" value={form.lokasi_monitoring} onChange={handleChange} placeholder="Masukkan lokasi monitoring" className="mt-1"/>
+                    <TextInput name="lokasi_monitoring" value={form.lokasi_monitoring} onChange={handleChange} placeholder="Masukkan lokasi monitoring" className="mt-1" required/>
                   </div>
                 </div>
               </div>
@@ -438,7 +439,7 @@ export default function MonitoringPage() {
               <div className="space-y-4 pt-4 border-t border-gray-100">
                 <div>
                   <Label>Status <span className="text-red-500">*</span></Label>
-                  <Select name="status_monitoring" value={form.status_monitoring} onChange={handleChange} className="mt-1">
+                  <Select name="status_monitoring" value={form.status_monitoring} onChange={handleChange} className="mt-1" required>
                     <option value="dijadwalkan">Dijadwalkan</option>
                     <option value="selesai">Selesai</option>
                   </Select>
@@ -451,7 +452,7 @@ export default function MonitoringPage() {
             </form>
           </ModalBody>
           <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-            <Button color="blue" onClick={handleSimpan} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
+            <Button form="monitoring-form" type="submit" color="blue" disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
             <Button color="red" onClick={() => setShowTambah(false)}>Batal</Button>
           </ModalFooter>
         </Modal>

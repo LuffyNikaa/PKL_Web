@@ -128,7 +128,8 @@ export default function DataDudiPage() {
   // =====================
   // CREATE
   // =====================
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:8000/api/admin/dudi", {
@@ -166,7 +167,8 @@ export default function DataDudiPage() {
   // =====================
   // UPDATE
   // =====================
-  const handleUpdateDudi = async () => {
+  const handleUpdateDudi = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!selectedDudi) return;
     const payload = {
       ...form,
@@ -342,7 +344,7 @@ export default function DataDudiPage() {
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Tambah Data Dudi</ModalHeader>
         <ModalBody className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           {/* grid tinggi penuh agar map bisa stretch */}
-          <div className="grid grid-cols-2 gap-4" style={{ minHeight: "480px" }}>
+          <form id="add-dudi-form" className="grid grid-cols-2 gap-4" style={{ minHeight: "480px" }} onSubmit={handleSimpan}>
             {/* Kiri: Form */}
             <div className="space-y-4">
               <div>
@@ -403,10 +405,10 @@ export default function DataDudiPage() {
                 isAddMode={true}
               />
             </div>
-          </div>
+          </form>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button onClick={handleSimpan} color="blue">Simpan</Button>
+          <Button form="add-dudi-form" type="submit" color="blue">Simpan</Button>
           <Button onClick={() => { setShowModal(false); resetFormDudi(); }} color="red">Batal</Button>
         </ModalFooter>
       </Modal>
@@ -428,14 +430,14 @@ export default function DataDudiPage() {
         </ModalHeader>
         <ModalBody className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           {selectedDudi && (
-            <div className="grid grid-cols-2 gap-6" style={{ minHeight: "480px" }}>
+            <form id="edit-dudi-form" className="grid grid-cols-2 gap-6" style={{ minHeight: "480px" }} onSubmit={handleUpdateDudi}>
               {/* Kiri: Form */}
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="nama_dudi">Nama DUDI</Label>
                   <TextInput
                     id="nama_dudi" name="nama_dudi"
-                    value={isEditMode ? form.nama_dudi : selectedDudi.nama_dudi}
+                    value={isEditMode ? form.nama_dudi : (selectedDudi?.nama_dudi || "")}
                     onChange={handleFormChange} readOnly={!isEditMode}
                   />
                 </div>
@@ -444,7 +446,7 @@ export default function DataDudiPage() {
                   <TextInput
                     id="kontak_dudi" name="kontak_dudi"
                     type="text" inputMode="numeric"
-                    value={isEditMode ? form.kontak_dudi : selectedDudi.kontak_dudi}
+                    value={isEditMode ? form.kontak_dudi : (selectedDudi?.kontak_dudi || "")}
                     onChange={handleFormChange} readOnly={!isEditMode}
                   />
                 </div>
@@ -452,7 +454,7 @@ export default function DataDudiPage() {
                   <Label htmlFor="latitude_dudi">Latitude</Label>
                   <TextInput
                     id="latitude_dudi" name="latitude_dudi"
-                    value={isEditMode ? form.latitude_dudi : (selectedDudi.latitude_dudi || "")}
+                    value={isEditMode ? form.latitude_dudi : (selectedDudi?.latitude_dudi || "")}
                     readOnly
                   />
                 </div>
@@ -460,7 +462,7 @@ export default function DataDudiPage() {
                   <Label htmlFor="longitude_dudi">Longitude</Label>
                   <TextInput
                     id="longitude_dudi" name="longitude_dudi"
-                    value={isEditMode ? form.longitude_dudi : (selectedDudi.longitude_dudi || "")}
+                    value={isEditMode ? form.longitude_dudi : (selectedDudi?.longitude_dudi || "")}
                     readOnly
                   />
                 </div>
@@ -468,7 +470,7 @@ export default function DataDudiPage() {
                   <Label htmlFor="alamat_dudi">Alamat</Label>
                   <Textarea
                     id="alamat_dudi" name="alamat_dudi"
-                    value={isEditMode ? form.alamat_dudi : selectedDudi.alamat_dudi}
+                    value={isEditMode ? form.alamat_dudi : (selectedDudi?.alamat_dudi || "")}
                     onChange={handleFormChange} readOnly={!isEditMode} rows={3}
                   />
                 </div>
@@ -493,7 +495,7 @@ export default function DataDudiPage() {
                   isAddMode={false}
                 />
               </div>
-            </div>
+            </form>
           )}
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
@@ -504,7 +506,7 @@ export default function DataDudiPage() {
             </>
           ) : (
             <>
-              <Button color="blue" onClick={handleUpdateDudi}>Simpan</Button>
+              <Button form="edit-dudi-form" type="submit" color="blue">Simpan</Button>
               <Button color="red" onClick={() => { setIsEditMode(false); resetFormDudi(); }}>Batal</Button>
             </>
           )}

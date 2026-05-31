@@ -172,7 +172,8 @@ export default function PenempatanPage() {
     setShowDetailModal(true);
   };
 
-  const handleSimpan = async () => {
+  const handleSimpan = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     try {
       const token = localStorage.getItem("token");
       const method = isEditMode ? "PUT" : "POST";
@@ -379,7 +380,7 @@ export default function PenempatanPage() {
         </ModalHeader>
 
         <ModalBody className="px-6 py-4">
-          <form className="grid grid-cols-2 gap-4">
+          <form id="penempatan-form" onSubmit={handleSimpan} className="grid grid-cols-2 gap-4">
             <div className="space-y-5">
               <div>
                 <Label htmlFor="id_siswa">Siswa</Label>
@@ -459,7 +460,7 @@ export default function PenempatanPage() {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button onClick={handleSimpan} color="blue">
+          <Button form="penempatan-form" type="submit" color="blue">
             Simpan
           </Button>
           <Button onClick={() => setShowModal(false)} color="red">
@@ -481,7 +482,7 @@ export default function PenempatanPage() {
 
         <ModalBody className="px-6 py-4">
           {selectedPenempatan && (
-            <form className="grid grid-cols-2 gap-4">
+            <form id="penempatan-detail-form" onSubmit={handleSimpan} className="grid grid-cols-2 gap-4">
               <div className="space-y-5">
                 <div>
                   <Label htmlFor="id_siswa">Siswa</Label>
@@ -562,7 +563,7 @@ export default function PenempatanPage() {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          {!isEditMode ? (
+              {!isEditMode ? (
             <>
               <Button color="blue" onClick={() => {
                 if (selectedPenempatan) {
@@ -580,7 +581,7 @@ export default function PenempatanPage() {
             </>
           ) : (
             <>
-              <Button color="blue" onClick={handleSimpan}>
+              <Button form="penempatan-detail-form" type="submit" color="blue">
                 Simpan
               </Button>
               <Button

@@ -20,7 +20,9 @@ class PenempatanController extends Controller
             'dudi',
             'guru',
             'periode'
-        ])->get();
+        ])
+        ->orderBy('id_penempatan', 'desc')
+        ->get();
 
         return response()->json([
             'data' => $penempatan

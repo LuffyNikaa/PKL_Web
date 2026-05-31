@@ -27,7 +27,9 @@ class SiswaController extends Controller
                 'penempatan.dudi',
                 'penempatan.periode',
                 'user'
-            ])->get();
+             ])
+             ->orderBy('id_siswa', 'desc')
+             ->get();
 
             return response()->json([
                 'data' => $siswa->map(function ($s) {

@@ -33,7 +33,9 @@ class JurnalHarianWebController extends Controller
             $query->whereDate('tanggal_jurnal_harian', $request->tanggal);
         }
 
-        $jurnal = $query->orderBy('tanggal_jurnal_harian', 'desc')->get();
+        $jurnal = $query->orderBy('tanggal_jurnal_harian', 'desc')
+                        ->orderBy('id_jurnal_harian', 'desc')
+                        ->get();
 
         return response()->json([
             'data' => $jurnal->map(function ($j) {

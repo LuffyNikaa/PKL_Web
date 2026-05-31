@@ -27,7 +27,9 @@ class PresentasiController extends Controller
         }
 
         return response()->json([
-            'data' => $query->orderBy('tanggal_presentasi', 'desc')->get()->map(fn($p) => $this->format($p))
+            'data' => $query->orderBy('tanggal_presentasi', 'desc')
+                            ->orderBy('id_presentasi', 'desc')
+                            ->get()->map(fn($p) => $this->format($p))
         ]);
     }
 

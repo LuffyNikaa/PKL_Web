@@ -69,7 +69,7 @@ class GuruController extends Controller
 
     public function index()
     {
-        $gurus = Guru::with('user')->get();
+        $gurus = Guru::with('user')->orderBy('id_guru', 'desc')->get();
         return response()->json([
             'data' => $gurus
         ]);

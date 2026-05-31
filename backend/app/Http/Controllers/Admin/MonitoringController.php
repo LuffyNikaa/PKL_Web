@@ -28,7 +28,9 @@ class MonitoringController extends Controller
         }
 
         return response()->json([
-            'data' => $query->orderBy('tanggal_monitoring', 'desc')->get()->map(fn($m) => $this->format($m))
+            'data' => $query->orderBy('tanggal_monitoring', 'desc')
+                            ->orderBy('id_monitoring', 'desc')
+                            ->get()->map(fn($m) => $this->format($m))
         ]);
     }
 

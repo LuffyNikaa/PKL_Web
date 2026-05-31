@@ -11,7 +11,7 @@ class KelasController extends Controller
 {
     public function index()
     {
-        $kelas = Kelas::with('jurusan')->get();
+        $kelas = Kelas::with('jurusan')->orderBy('id_kelas', 'desc')->get();
 
         return response()->json([
             'data' => $kelas
