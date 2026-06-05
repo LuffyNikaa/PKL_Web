@@ -62,6 +62,13 @@ export default function PeriodePage() {
   };
   const removeToast = (id: string) => setToasts((s) => s.filter((t) => t.id !== id));
 
+  const resetForm = () => setForm(emptyForm);
+
+  const openTambahModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -70,6 +77,13 @@ export default function PeriodePage() {
   useEffect(() => {
     fetchPeriode();
   }, []);
+
+  useEffect(() => {
+    if (!showDetailModal) {
+      resetForm();
+      setIsEditMode(false);
+    }
+  }, [showDetailModal]);
 
   const fetchPeriode = async () => {
     try {
@@ -103,7 +117,8 @@ export default function PeriodePage() {
     setShowDetailModal(true);
   };
 
-  const handleEditPeriode = () => {
+  const handleEditPeriode = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (selectedPeriode) {
       setIsEditMode(true);
     }
@@ -157,7 +172,7 @@ export default function PeriodePage() {
 
       await fetchPeriode();
       setShowModal(false);
-      setForm(emptyForm);
+      resetForm();
       pushToast("success", "Periode berhasil ditambahkan");
     } catch (err: any) {
       pushToast("error", err.message || "Gagal menambahkan periode");
@@ -228,12 +243,7 @@ export default function PeriodePage() {
             </h1>
 
             <button
-              onClick={() => {
-                setForm(emptyForm);
-                setSelectedPeriode(null);
-                setIsEditMode(false);
-                setShowModal(true);
-              }}
+              onClick={openTambahModal}
               className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter w-fit"
             >
               Tambah <span className="text-lg">+</span>
@@ -402,7 +412,10 @@ export default function PeriodePage() {
           <Button form="add-periode-form" type="submit" color="blue"> 
             Simpan
           </Button>
-          <Button color="red" onClick={() => setShowModal(false)}>
+          <Button type="button" color="red" onClick={() => {
+            setShowModal(false);
+            resetForm();
+          }}>
             Batal
           </Button>
         </ModalFooter>
@@ -469,10 +482,10 @@ export default function PeriodePage() {
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           {!isEditMode ? (
             <>
-              <Button color="blue" onClick={handleEditPeriode}>
+              <Button type="button" color="blue" onClick={handleEditPeriode}>
                 Edit
               </Button>
-              <Button color="red" onClick={() => setShowConfirmDelete(true)}>
+              <Button type="button" color="red" onClick={() => setShowConfirmDelete(true)}>
                 Hapus
               </Button>
             </>
@@ -481,7 +494,10 @@ export default function PeriodePage() {
               <Button form="edit-periode-form" type="submit" color="blue">
                 Simpan
               </Button>
-              <Button color="red" onClick={() => setIsEditMode(false)}>
+              <Button type="button" color="red" onClick={() => {
+                setIsEditMode(false);
+                resetForm();
+              }}>
                 Batal
               </Button>
             </>
@@ -514,10 +530,10 @@ export default function PeriodePage() {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>
+          <Button type="button" color="gray" onClick={() => setShowConfirmDelete(false)}>
             Batal
           </Button>
-          <Button color="red" onClick={handleDeletePeriode}>
+          <Button type="button" color="red" onClick={handleDeletePeriode}>
             Ya, Hapus
           </Button>
         </ModalFooter>

@@ -49,4 +49,10 @@ class Users extends Model
     {
         return $this->hasOne(Guru::class, 'id_users', 'id_users');
     }
+
+    // jika user adalah akun DuDi, hubungkan ke tabel dudi (1 user -> 1 dudi)
+    public function dudi()
+    {
+        return $this->hasOne(Dudi::class, 'id_users', 'id_users');
+    }
 }

@@ -66,6 +66,11 @@ export default function DataDudiPage() {
     });
   };
 
+  const openTambahModal = () => {
+    resetFormDudi();
+    setShowModal(true);
+  };
+
   const MapComponent = dynamic(
     () => import("../components/MapComponents"),
     { ssr: false }
@@ -152,7 +157,8 @@ export default function DataDudiPage() {
   // =====================
   // EDIT
   // =====================
-  const handleEditDudi = () => {
+  const handleEditDudi = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!selectedDudi) return;
     setForm({
       nama_dudi: selectedDudi.nama_dudi,
@@ -249,7 +255,7 @@ export default function DataDudiPage() {
             <h1 className="text-lg font-semibold mb-4 font-inter">Daftar Data Dudi</h1>
 
             <button
-              onClick={() => setShowModal(true)}
+              onClick={openTambahModal}
               className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter w-fit"
             >
               Tambah <span className="text-lg">+</span>
@@ -409,7 +415,7 @@ export default function DataDudiPage() {
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           <Button form="add-dudi-form" type="submit" color="blue">Simpan</Button>
-          <Button onClick={() => { setShowModal(false); resetFormDudi(); }} color="red">Batal</Button>
+          <Button type="button" onClick={() => { setShowModal(false); resetFormDudi(); }} color="red">Batal</Button>
         </ModalFooter>
       </Modal>
 
@@ -501,13 +507,13 @@ export default function DataDudiPage() {
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           {!isEditMode ? (
             <>
-              <Button color="blue" onClick={handleEditDudi}>Edit</Button>
-              <Button color="red" onClick={() => setShowConfirmDelete(true)}>Hapus</Button>
+              <Button type="button" color="blue" onClick={handleEditDudi}>Edit</Button>
+              <Button type="button" color="red" onClick={() => setShowConfirmDelete(true)}>Hapus</Button>
             </>
           ) : (
             <>
               <Button form="edit-dudi-form" type="submit" color="blue">Simpan</Button>
-              <Button color="red" onClick={() => { setIsEditMode(false); resetFormDudi(); }}>Batal</Button>
+              <Button type="button" color="red" onClick={() => { setIsEditMode(false); resetFormDudi(); }}>Batal</Button>
             </>
           )}
         </ModalFooter>
@@ -531,8 +537,8 @@ export default function DataDudiPage() {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>Batal</Button>
-          <Button color="red" onClick={handleDeleteDudi}>Ya, Hapus</Button>
+          <Button type="button" color="gray" onClick={() => setShowConfirmDelete(false)}>Batal</Button>
+          <Button type="button" color="red" onClick={handleDeleteDudi}>Ya, Hapus</Button>
         </ModalFooter>
       </Modal>
     </div>

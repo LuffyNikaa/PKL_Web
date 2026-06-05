@@ -17,6 +17,10 @@ type JurnalItem = {
   tempat_pkl: string;
   tanggal: string;
   kegiatan: string;
+  status_jurnal?: string;
+  approve_by?: string;
+  approve_at?: string;
+  catatan?: string;
 };
 
 type Siswa = {
@@ -243,27 +247,45 @@ export default function DataJurnalHarianPage() {
     doc.setFontSize(11); doc.setFont("helvetica", "bold");
     doc.text("Riwayat Jurnal Harian", 14, tableStartY);
 
+    // Sort rekapData ascending (oldest first)
+    const sortedRekap = [...rekapData].sort((a, b) => {
+      const parseDate = (dStr: string) => {
+        if (!dStr || dStr === "-") return 0;
+        const [d, m, y] = dStr.split("-").map(Number);
+        return new Date(y, m - 1, d).getTime();
+      };
+      return parseDate(a.tanggal) - parseDate(b.tanggal);
+    });
+
     autoTable(doc, {
       startY: tableStartY + 4,
       theme: "grid",
-      head: [["No", "Hari/Tanggal", "Kegiatan Jurnal", "Catatan DUDI", "Paraf"]],
-      body: rekapData.map((r, i) => [
-        i + 1,
-        formatHariTanggal(r.tanggal),
-        r.kegiatan,
-        "", // area kosong untuk catatan manual DUDI
-        ""  // area kosong untuk paraf manual DUDI
-      ]),
+      head: [["No", "Hari/Tanggal", "Kegiatan Jurnal", "Status Approval", "Catatan DUDI", "Paraf"]],
+      body: sortedRekap.map((r, i) => {
+        let statusText = "Pending";
+        if (r.status_jurnal === "approved") statusText = "Disetujui";
+        else if (r.status_jurnal === "rejected") statusText = "Ditolak";
+
+        return [
+          i + 1,
+          formatHariTanggal(r.tanggal),
+          r.kegiatan,
+          statusText,
+          r.catatan && r.catatan !== "-" ? r.catatan : "", // tampilkan catatan dudi jika ada dari db, jika tidak kosong
+          ""  // area kosong untuk paraf manual DUDI
+        ];
+      }),
       styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold", fontSize: 9 },
       bodyStyles: { fontSize: 8.5, valign: "middle" },
       alternateRowStyles: { fillColor: [245, 247, 255] },
       columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 38 },
-        2: { cellWidth: 74 },
-        3: { cellWidth: 40 }, // catatan dudi
-        4: { cellWidth: 20, halign: "center" }, // paraf dudi
+        0: { cellWidth: 8, halign: "center" },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 63 },
+        3: { cellWidth: 24 }, // status approval
+        4: { cellWidth: 36 }, // catatan dudi
+        5: { cellWidth: 16, halign: "center" }, // paraf dudi
       },
       margin: { left: 14, right: 14 },
     });
@@ -542,6 +564,53 @@ export default function DataJurnalHarianPage() {
                       rows={6}
                       className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 resize-none focus:outline-none"
                     />
+                  </div>
+                </div>
+
+                <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Informasi Approval Jurnal</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="d_status">Status Jurnal</Label>
+                        <div className="mt-1.5">
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                            selected.status_jurnal === 'approved' 
+                              ? 'bg-green-100 text-green-800 border border-green-200' 
+                              : selected.status_jurnal === 'rejected' 
+                              ? 'bg-red-100 text-red-800 border border-red-200' 
+                              : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                          }`}>
+                            {selected.status_jurnal === 'approved' 
+                              ? 'Disetujui' 
+                              : selected.status_jurnal === 'rejected' 
+                              ? 'Ditolak' 
+                              : 'Pending'}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="d_approve_by">Disetujui/Ditolak Oleh</Label>
+                        <TextInput id="d_approve_by" value={selected.approve_by ?? "-"} readOnly className="mt-1" />
+                      </div>
+                      <div>
+                        <Label htmlFor="d_approve_at">Tanggal Aksi</Label>
+                        <TextInput id="d_approve_at" value={selected.approve_at ?? "-"} readOnly className="mt-1" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="d_catatan">Catatan</Label>
+                        <textarea
+                          id="d_catatan"
+                          value={selected.catatan ?? "-"}
+                          readOnly
+                          rows={6}
+                          className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 resize-none focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </form>

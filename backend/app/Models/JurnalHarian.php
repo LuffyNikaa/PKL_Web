@@ -14,16 +14,27 @@ class JurnalHarian extends Model
         'id_penempatan',              // ✅ Ganti dengan id_penempatan
         'tanggal_jurnal_harian',
         'kegiatan_jurnal_harian',
+        'status_jurnal_harian',
+        'approved_by',
+        'approved_at',
+        'catatan_approval',
     ];
 
     protected $casts = [
         'tanggal_jurnal_harian' => 'date',
+        'approved_at' => 'datetime',
     ];
 
     // Relasi ke penempatan
     public function penempatan() 
     { 
         return $this->belongsTo(Penempatan::class, 'id_penempatan', 'id_penempatan'); 
+    }
+
+    // Relasi ke approver (User)
+    public function approver()
+    {
+        return $this->belongsTo(Users::class, 'approved_by', 'id_users');
     }
     
     // Relasi ke siswa (via penempatan)

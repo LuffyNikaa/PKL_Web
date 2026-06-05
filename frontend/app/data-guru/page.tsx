@@ -69,6 +69,25 @@ const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  const resetForm = () => {
+    setForm({
+      nama_guru: "",
+      nip_guru: "",
+      mapel_guru: "",
+      jk_guru: "",
+      alamat_guru: "",
+      no_guru: "",
+      email_users: "",
+      password: "",
+      status_users: "aktif",
+    });
+  };
+
+  const openTambahModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -132,17 +151,7 @@ const [showConfirmDelete, setShowConfirmDelete] = useState(false)
       pushToast('success', 'Guru berhasil ditambahkan');
 
       // reset form
-      setForm({
-        nama_guru: "",
-        nip_guru: "",
-        mapel_guru: "",
-        jk_guru: "",
-        alamat_guru: "",
-        no_guru: "",
-        email_users: "",
-        password: "",
-        status_users: "aktif",
-      });
+      resetForm();
 
     } catch (err: any) {
       console.error(err);
@@ -151,7 +160,8 @@ const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   };
 
   // Fungsi handle edit / hapus
-const handleEditGuru = () => {
+const handleEditGuru = (e?: React.MouseEvent) => {
+  if (e) e.preventDefault();
   if (selectedGuru) {
     setForm({
       nama_guru: selectedGuru.nama_guru,
@@ -198,8 +208,13 @@ const handleDeleteGuru = async () => {
 
 // Update handleSimpan untuk edit
 const handleUpdateGuru = async (e?: React.FormEvent) => {
-  if (e && typeof e.preventDefault === 'function') e.preventDefault();
-  if (!selectedGuru) return;
+  if (e) {
+    e.preventDefault();
+  }
+  if (!selectedGuru) {
+    pushToast('error', 'Guru tidak terpilih');
+    return;
+  }
 
   try {
     const token = localStorage.getItem("token");
@@ -257,7 +272,7 @@ const handleUpdateGuru = async (e?: React.FormEvent) => {
             </h1>
 
             <button
-              onClick={() => setShowModal(true)}
+              onClick={openTambahModal}
               className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter w-fit"
             >
               Tambah <span className="text-lg">+</span>
@@ -534,7 +549,10 @@ const handleUpdateGuru = async (e?: React.FormEvent) => {
           <Button form="add-guru-form" type="submit" color="blue">
             Simpan
           </Button>
-          <Button onClick={() => setShowModal(false)} color="red">
+          <Button type="button" onClick={() => {
+            setShowModal(false);
+            resetForm();
+          }} color="red">
             Batal
           </Button>
         </ModalFooter>
@@ -673,10 +691,10 @@ const handleUpdateGuru = async (e?: React.FormEvent) => {
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           {!isEditMode ? (
             <>
-              <Button color="blue" onClick={handleEditGuru}>
+              <Button type="button" color="blue" onClick={handleEditGuru}>
                 Edit
               </Button>
-              <Button color="red" onClick={() => setShowConfirmDelete(true)}>
+              <Button type="button" color="red" onClick={() => setShowConfirmDelete(true)}>
                 Hapus
               </Button>
             </>
@@ -686,20 +704,11 @@ const handleUpdateGuru = async (e?: React.FormEvent) => {
                 Simpan
               </Button>
               <Button
+                type="button"
                 color="red"
                 onClick={() => {
                   setIsEditMode(false);
-                  setForm({
-                    nama_guru: "",
-                    nip_guru: "",
-                    mapel_guru: "",
-                    jk_guru: "",
-                    alamat_guru: "",
-                    no_guru: "",
-                    email_users: "",
-                    password: "",
-                    status_users: "aktif",
-                  });
+                  resetForm();
                 }}
               >
                 Batal
@@ -734,10 +743,13 @@ const handleUpdateGuru = async (e?: React.FormEvent) => {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>
+          <Button type="button" color="gray" onClick={() => {
+            setShowConfirmDelete(false);
+            resetForm();
+          }}>
             Batal
           </Button>
-          <Button color="red" onClick={handleDeleteGuru}>
+          <Button type="button" color="red" onClick={handleDeleteGuru}>
             Ya, Hapus
           </Button>
         </ModalFooter>

@@ -24,6 +24,9 @@ class Kernel extends ConsoleKernel
     {
         $this->load(__DIR__.'/Commands');
 
+        // register custom commands
+        $this->load(__DIR__.'/Commands/SyncDudiUsers.php');
+
         require base_path('routes/console.php');
     }
 }

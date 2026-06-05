@@ -24,7 +24,7 @@ class LoginController extends Controller
             return response()->json(['message' => 'Login gagal'], 401);
         }
 
-        if (!in_array($user->role_users, ['admin', 'guru'])) {
+        if (!in_array($user->role_users, ['admin', 'guru', 'dudi'])) {
             return response()->json(['message' => 'Akses CMS ditolak'], 403);
         }
 

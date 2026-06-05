@@ -35,7 +35,8 @@ class JurnalHarianController extends Controller
             }
 
             // Query jurnal berdasarkan id_penempatan
-            $query = JurnalHarian::where('id_penempatan', $penempatan->id_penempatan)
+            $query = JurnalHarian::with('approver')
+                ->where('id_penempatan', $penempatan->id_penempatan)
                 ->orderBy('tanggal_jurnal_harian', 'desc');
 
             if ($request->filled('search')) {
@@ -51,14 +52,19 @@ class JurnalHarianController extends Controller
 
             $jurnal = $query->get()->map(function ($j) use ($sudahPulang) {
                 $isHariIni = Carbon::parse($j->tanggal_jurnal_harian)->isToday();
-                $bisaEdit = $isHariIni && !$sudahPulang;
+                // ✅ Jurnal hanya bisa diedit jika statusnya pending dan di hari yang sama sebelum absen pulang
+                $bisaEdit = $isHariIni && !$sudahPulang && ($j->status_jurnal_harian ?? 'pending') === 'pending';
 
                 return [
-                    'id_jurnal_harian' => $j->id_jurnal_harian,
-                    'tanggal'          => Carbon::parse($j->tanggal_jurnal_harian)->format('Y-m-d'),
-                    'tanggal_format'   => Carbon::parse($j->tanggal_jurnal_harian)->translatedFormat('l, j F Y'),
-                    'kegiatan'         => $j->kegiatan_jurnal_harian,
-                    'bisa_edit'        => $bisaEdit,
+                    'id_jurnal_harian'      => $j->id_jurnal_harian,
+                    'tanggal'               => Carbon::parse($j->tanggal_jurnal_harian)->format('Y-m-d'),
+                    'tanggal_format'        => Carbon::parse($j->tanggal_jurnal_harian)->translatedFormat('l, j F Y'),
+                    'kegiatan'              => $j->kegiatan_jurnal_harian,
+                    'bisa_edit'             => $bisaEdit,
+                    'status_jurnal_harian'  => $j->status_jurnal_harian ?? 'pending',
+                    'approved_by_name'      => $j->approver?->nama_users,
+                    'approved_at'           => $j->approved_at ? Carbon::parse($j->approved_at)->format('d-m-Y H:i') : null,
+                    'catatan_approval'      => $j->catatan_approval,
                 ];
             });
 
@@ -197,6 +203,11 @@ class JurnalHarianController extends Controller
 
             if ($absensi?->waktu_pulang) {
                 return response()->json(['message' => 'Tidak bisa mengedit jurnal setelah absen pulang'], 422);
+            }
+
+            // Cek status jurnal harian harus pending
+            if (($jurnal->status_jurnal_harian ?? 'pending') !== 'pending') {
+                return response()->json(['message' => 'Jurnal yang sudah disetujui/ditolak tidak dapat diedit'], 422);
             }
 
             $jurnal->update(['kegiatan_jurnal_harian' => $request->kegiatan_jurnal_harian]);

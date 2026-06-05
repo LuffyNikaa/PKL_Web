@@ -79,6 +79,7 @@ export default function PenempatanPage() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filterPeriode, setFilterPeriode] = useState("all");
@@ -140,6 +141,7 @@ export default function PenempatanPage() {
   }, []);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.stopPropagation(); // Tambahkan ini
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -173,7 +175,20 @@ export default function PenempatanPage() {
   };
 
   const handleSimpan = async (e?: React.FormEvent) => {
-    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Validasi form
+    if (!form.id_siswa || !form.id_dudi || !form.id_guru || !form.id_periode) {
+      pushToast("error", "Semua field harus diisi!");
+      return;
+    }
+
+    if (isLoading) return;
+
+    setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
       const method = isEditMode ? "PUT" : "POST";
@@ -193,20 +208,25 @@ export default function PenempatanPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message);
 
-      fetchPenempatan();
+      await fetchPenempatan();
       setShowModal(false);
       setShowDetailModal(false);
       setForm(emptyForm);
       setIsEditMode(false);
+      setSelectedPenempatan(null);
       pushToast("success", isEditMode ? "Penempatan berhasil diperbarui!" : "Penempatan berhasil ditambahkan!");
     } catch (err: any) {
       console.error(err);
       pushToast("error", err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedPenempatan) return;
+    
+    setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`http://localhost:8000/api/admin/penempatan/${selectedPenempatan.id_penempatan}`, {
@@ -216,13 +236,38 @@ export default function PenempatanPage() {
 
       if (!res.ok) throw new Error("Gagal menghapus penempatan");
 
-      fetchPenempatan();
+      await fetchPenempatan();
       setShowConfirmDelete(false);
       setShowDetailModal(false);
+      setSelectedPenempatan(null);
       pushToast("success", "Penempatan berhasil dihapus!");
     } catch (err: any) {
       console.error(err);
       pushToast("error", err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setShowDetailModal(false);
+    setIsEditMode(false);
+    setForm(emptyForm);
+    setSelectedPenempatan(null);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    if (selectedPenempatan) {
+      setForm({
+        id_siswa: selectedPenempatan.id_siswa.toString(),
+        id_dudi: selectedPenempatan.id_dudi.toString(),
+        id_guru: selectedPenempatan.id_guru.toString(),
+        id_periode: selectedPenempatan.id_periode.toString(),
+      });
+    } else {
+      setForm(emptyForm);
     }
   };
 
@@ -248,6 +293,18 @@ export default function PenempatanPage() {
   useEffect(() => {
     setPage(1);
   }, [search, filterPeriode]);
+
+  // Reset form when edit mode changes in detail modal
+  useEffect(() => {
+    if (showDetailModal && selectedPenempatan && !isEditMode) {
+      setForm({
+        id_siswa: selectedPenempatan.id_siswa.toString(),
+        id_dudi: selectedPenempatan.id_dudi.toString(),
+        id_guru: selectedPenempatan.id_guru.toString(),
+        id_periode: selectedPenempatan.id_periode.toString(),
+      });
+    }
+  }, [isEditMode, selectedPenempatan, showDetailModal]);
 
   if (!user) return <div>Loading...</div>;
 
@@ -374,7 +431,7 @@ export default function PenempatanPage() {
       </main>
 
       {/* Modal Tambah/Edit */}
-      <Modal dismissible show={showModal} size="4xl" onClose={() => setShowModal(false)}>
+      <Modal dismissible show={showModal} size="4xl" onClose={handleCloseModal}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">
           {isEditMode ? "Edit Penempatan" : "Tambah Penempatan"}
         </ModalHeader>
@@ -460,10 +517,10 @@ export default function PenempatanPage() {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-          <Button form="penempatan-form" type="submit" color="blue">
-            Simpan
+          <Button form="penempatan-form" type="submit" color="blue" disabled={isLoading}>
+            {isLoading ? "Menyimpan..." : "Simpan"}
           </Button>
-          <Button onClick={() => setShowModal(false)} color="red">
+          <Button onClick={handleCloseModal} color="red">
             Batal
           </Button>
         </ModalFooter>
@@ -474,7 +531,7 @@ export default function PenempatanPage() {
         dismissible
         show={showDetailModal}
         size="4xl"
-        onClose={() => setShowDetailModal(false)}
+        onClose={handleCloseModal}
       >
         <ModalHeader className="px-6 py-4 border-b border-gray-200">
           {isEditMode ? "Edit Penempatan" : "Detail Penempatan"}
@@ -482,16 +539,22 @@ export default function PenempatanPage() {
 
         <ModalBody className="px-6 py-4">
           {selectedPenempatan && (
-            <form id="penempatan-detail-form" onSubmit={handleSimpan} className="grid grid-cols-2 gap-4">
+            <form 
+              id="penempatan-detail-form" 
+              onSubmit={handleSimpan}
+              className="grid grid-cols-2 gap-4"
+            >
               <div className="space-y-5">
                 <div>
-                  <Label htmlFor="id_siswa">Siswa</Label>
+                  <Label htmlFor="detail_id_siswa">Siswa</Label>
                   <Select
-                    id="id_siswa"
+                    id="detail_id_siswa"
                     name="id_siswa"
                     value={form.id_siswa || selectedPenempatan.id_siswa.toString()}
                     onChange={handleFormChange}
                     disabled={!isEditMode}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <option value="">Pilih Siswa</option>
                     {siswaList.map((siswa) => (
@@ -503,13 +566,15 @@ export default function PenempatanPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="id_guru">Guru</Label>
+                  <Label htmlFor="detail_id_guru">Guru</Label>
                   <Select
-                    id="id_guru"
+                    id="detail_id_guru"
                     name="id_guru"
                     value={form.id_guru || selectedPenempatan.id_guru.toString()}
                     onChange={handleFormChange}
                     disabled={!isEditMode}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <option value="">Pilih Guru</option>
                     {guruList.map((guru) => (
@@ -523,13 +588,15 @@ export default function PenempatanPage() {
 
               <div className="space-y-5">
                 <div>
-                  <Label htmlFor="id_dudi">DuDi</Label>
+                  <Label htmlFor="detail_id_dudi">DuDi</Label>
                   <Select
-                    id="id_dudi"
+                    id="detail_id_dudi"
                     name="id_dudi"
                     value={form.id_dudi || selectedPenempatan.id_dudi.toString()}
                     onChange={handleFormChange}
                     disabled={!isEditMode}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <option value="">Pilih DuDi</option>
                     {dudiList.map((dudi) => (
@@ -541,13 +608,15 @@ export default function PenempatanPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="id_periode">Periode</Label>
+                  <Label htmlFor="detail_id_periode">Periode</Label>
                   <Select
-                    id="id_periode"
+                    id="detail_id_periode"
                     name="id_periode"
                     value={form.id_periode || selectedPenempatan.id_periode.toString()}
                     onChange={handleFormChange}
                     disabled={!isEditMode}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <option value="">Pilih Periode</option>
                     {periodeList.map((periode) => (
@@ -563,33 +632,42 @@ export default function PenempatanPage() {
         </ModalBody>
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
-              {!isEditMode ? (
+          {!isEditMode ? (
             <>
-              <Button color="blue" onClick={() => {
-                if (selectedPenempatan) {
-                  handleEditPenempatan(selectedPenempatan, true);
-                }
-              }}>
+              <Button 
+                color="blue" 
+                onClick={() => {
+                  if (selectedPenempatan) {
+                    handleEditPenempatan(selectedPenempatan, true);
+                  }
+                }}
+              >
                 Edit
               </Button>
-              <Button color="red" onClick={() => {
-                setShowDetailModal(false);
-                setShowConfirmDelete(true);
-              }}>
+              <Button 
+                color="red" 
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setShowConfirmDelete(true);
+                }}
+              >
                 Hapus
               </Button>
             </>
           ) : (
             <>
-              <Button form="penempatan-detail-form" type="submit" color="blue">
-                Simpan
+              <Button 
+                form="penempatan-detail-form" 
+                type="submit" 
+                color="blue"
+                disabled={isLoading}
+              >
+                {isLoading ? "Menyimpan..." : "Simpan"}
               </Button>
               <Button
                 color="red"
-                onClick={() => {
-                  setIsEditMode(false);
-                  setForm(emptyForm);
-                }}
+                onClick={handleCancelEdit}
+                disabled={isLoading}
               >
                 Batal
               </Button>
@@ -598,7 +676,7 @@ export default function PenempatanPage() {
         </ModalFooter>
       </Modal>
 
-      {/* ===== MODAL KONFIRMASI HAPUS ===== */}
+      {/* Modal Konfirmasi Hapus */}
       <Modal dismissible show={showConfirmDelete} size="sm" onClose={() => setShowConfirmDelete(false)}>
         <ModalHeader className="px-6 py-4 border-b border-gray-200">Konfirmasi Hapus</ModalHeader>
         <ModalBody className="px-6 py-4">
@@ -616,8 +694,12 @@ export default function PenempatanPage() {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>Batal</Button>
-          <Button color="red" onClick={handleDelete}>Ya, Hapus</Button>
+          <Button color="gray" onClick={() => setShowConfirmDelete(false)} disabled={isLoading}>
+            Batal
+          </Button>
+          <Button color="red" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? "Menghapus..." : "Ya, Hapus"}
+          </Button>
         </ModalFooter>
       </Modal>
     </div>

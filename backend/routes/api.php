@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\GuruController;
 use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterDudiController;
 use App\Http\Controllers\Admin\DudiController;
 use App\Http\Controllers\API\Mobile\PresensiController;
 use App\Http\Controllers\Admin\PresensiWebController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Admin\JurusanController;
 use App\Http\Controllers\Admin\KelasController;
 use App\Http\Controllers\Admin\PeriodeController;
 use App\Http\Controllers\Admin\PenempatanController;
+use App\Http\Controllers\Admin\DudiJurnalWebController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +39,9 @@ use App\Http\Controllers\Admin\PenempatanController;
 // =====================
 Route::post('/login/web', [LoginController::class, 'loginWeb']);
 Route::post('/login/mobile', [LoginController::class, 'loginMobile']);
+Route::post('/register/dudi', [RegisterDudiController::class, 'register']);
+Route::get('/register/dudi', [RegisterDudiController::class, 'available']);
+Route::get('/dudi/available', [RegisterDudiController::class, 'available']);
 
 // =====================
 // MOBILE (PUBLIC)
@@ -99,6 +104,19 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         Route::post('/admin/penempatan', [PenempatanController::class, 'store']);
         Route::put('/admin/penempatan/{id}', [PenempatanController::class, 'update']);
         Route::delete('/admin/penempatan/{id}', [PenempatanController::class, 'destroy']);
+    });
+
+    // =====================
+    // DUDI (WEB) - approval berbasis web
+    // =====================
+    Route::middleware('role:dudi')->group(function () {
+        Route::get('/admin/dudi/jurnal-harian', [DudiJurnalWebController::class, 'index']);
+        Route::post('/admin/dudi/jurnal-harian/{id}/approve', [DudiJurnalWebController::class, 'approve']);
+        Route::post('/admin/dudi/jurnal-harian/{id}/reject', [DudiJurnalWebController::class, 'reject']);
+        Route::get('/admin/dudi/jurnal-harian', [DudiJurnalWebController::class, 'index']);
+        Route::get('/admin/dudi/statistik', [DudiJurnalWebController::class, 'statistik']);  // ✅ Tambahkan ini
+        Route::post('/admin/dudi/jurnal-harian/{id}/approve', [DudiJurnalWebController::class, 'approve']);
+        Route::post('/admin/dudi/jurnal-harian/{id}/reject', [DudiJurnalWebController::class, 'reject']);
     });
 
     // =====================

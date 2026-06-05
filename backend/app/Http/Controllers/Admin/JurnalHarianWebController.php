@@ -9,7 +9,7 @@ class JurnalHarianWebController extends Controller
     // GET /api/admin/jurnal-harian
     public function index(Request $request)
     {
-        // Load jurnal dengan relasi penempatan > siswa > kelas > jurusan & penempatan > dudi
+        // Load jurnal dengan relasi penempatan > siswa > kelas > jurusan & penempatan > dudi & approver
         $query = JurnalHarian::with([
             'penempatan' => function ($q) {
                 $q->with([
@@ -18,7 +18,8 @@ class JurnalHarianWebController extends Controller
                     },
                     'dudi'
                 ]);
-            }
+            },
+            'approver'
         ]);
 
         // Filter nama siswa
@@ -50,6 +51,10 @@ class JurnalHarianWebController extends Controller
                                             ? $j->tanggal_jurnal_harian->format('d-m-Y')
                                             : '-',
                     'kegiatan'         => $j->kegiatan_jurnal_harian,
+                    'status_jurnal'    => $j->status_jurnal_harian ?? 'pending',
+                    'approve_by'       => $j->approver?->nama_users ?? '-',
+                    'approve_at'       => $j->approved_at ? $j->approved_at->format('d-m-Y H:i') : '-',
+                    'catatan'          => $j->catatan_approval ?? '-',
                 ];
             }),
         ]);

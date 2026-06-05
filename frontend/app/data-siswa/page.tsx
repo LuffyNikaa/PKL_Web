@@ -103,6 +103,16 @@ export default function DataSiswaPage() {
     id_kelas: "",
   };
 
+  const resetForm = () => {
+    setForm(emptyForm);
+    setSelectedJurusanForm("");
+  };
+
+  const openTambahModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -146,6 +156,13 @@ export default function DataSiswaPage() {
     fetchSiswa();
     fetchKelas();
   }, []);
+
+  useEffect(() => {
+    if (!showDetailModal) {
+      resetForm();
+      setIsEditMode(false);
+    }
+  }, [showDetailModal]);
 
   const handleFormChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
@@ -226,7 +243,7 @@ export default function DataSiswaPage() {
       pushToast("success", "Data siswa berhasil ditambahkan!");
       fetchSiswa();
       setShowModal(false);
-      setForm(emptyForm);
+      resetForm();
       
     } catch (err: any) {
       console.error("Error detail:", err);
@@ -234,7 +251,8 @@ export default function DataSiswaPage() {
     }
   };
 
-  const handleEditSiswa = () => {
+  const handleEditSiswa = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (selectedSiswa) {
       setForm({
         nama_siswa: selectedSiswa.nama_siswa,
@@ -303,6 +321,7 @@ export default function DataSiswaPage() {
       setShowDetailModal(false);
       setSelectedSiswa(null);
       setIsEditMode(false);
+      resetForm();
       pushToast("success", "Perubahan berhasil disimpan!");
     } catch (err: any) {
       console.error(err);
@@ -348,11 +367,7 @@ export default function DataSiswaPage() {
             </h1>
 
             <button
-              onClick={() => {
-                setForm(emptyForm);
-                setSelectedJurusanForm("");
-                setShowModal(true);
-              }}
+              onClick={openTambahModal}
               className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-inter w-fit"
             >
               Tambah <span className="text-lg">+</span>
@@ -658,7 +673,7 @@ export default function DataSiswaPage() {
           <Button form="add-siswa-form" type="submit" color="blue">
             Simpan
           </Button>
-          <Button onClick={() => { setShowModal(false); setSelectedJurusanForm(""); }} color="red">
+          <Button type="button" onClick={() => { setShowModal(false); resetForm(); }} color="red">
             Batal
           </Button>
         </ModalFooter>
@@ -810,10 +825,10 @@ export default function DataSiswaPage() {
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           {!isEditMode ? (
             <>
-              <Button onClick={handleEditSiswa} color="blue">
+              <Button type="button" onClick={handleEditSiswa} color="blue">
                 Edit
               </Button>
-              <Button onClick={() => setShowConfirmDelete(true)} color="red">
+              <Button type="button" onClick={() => setShowConfirmDelete(true)} color="red">
                 Hapus
               </Button>
             </>
@@ -823,10 +838,10 @@ export default function DataSiswaPage() {
                 Simpan
               </Button>
               <Button
+                type="button"
                 onClick={() => {
                   setIsEditMode(false);
-                  setForm(emptyForm);
-                  setSelectedJurusanForm("");
+                  resetForm();
                 }}
                 color="red"
               >
@@ -876,6 +891,7 @@ export default function DataSiswaPage() {
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           <Button
+            type="button"
             color="blue"
             onClick={() => {
               setFilterKelas(tempFilterKelas);
@@ -887,6 +903,7 @@ export default function DataSiswaPage() {
             Terapkan Filter
           </Button>
           <Button
+            type="button"
             color="light"
             onClick={() => {
               setTempFilterKelas("all");
@@ -927,10 +944,10 @@ export default function DataSiswaPage() {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)}>
+          <Button type="button" color="gray" onClick={() => setShowConfirmDelete(false)}>
             Batal
           </Button>
-          <Button color="red" onClick={handleDeleteSiswa}>
+          <Button type="button" color="red" onClick={handleDeleteSiswa}>
             Ya, Hapus
           </Button>
         </ModalFooter>
