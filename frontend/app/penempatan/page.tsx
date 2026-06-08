@@ -520,7 +520,7 @@ export default function PenempatanPage() {
           <Button form="penempatan-form" type="submit" color="blue" disabled={isLoading}>
             {isLoading ? "Menyimpan..." : "Simpan"}
           </Button>
-          <Button onClick={handleCloseModal} color="red">
+          <Button type="button" onClick={handleCloseModal} color="red">
             Batal
           </Button>
         </ModalFooter>
@@ -635,8 +635,10 @@ export default function PenempatanPage() {
           {!isEditMode ? (
             <>
               <Button 
+                type="button"
                 color="blue" 
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   if (selectedPenempatan) {
                     handleEditPenempatan(selectedPenempatan, true);
                   }
@@ -645,8 +647,10 @@ export default function PenempatanPage() {
                 Edit
               </Button>
               <Button 
+                type="button"
                 color="red" 
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   setShowDetailModal(false);
                   setShowConfirmDelete(true);
                 }}
@@ -665,6 +669,7 @@ export default function PenempatanPage() {
                 {isLoading ? "Menyimpan..." : "Simpan"}
               </Button>
               <Button
+                type="button"
                 color="red"
                 onClick={handleCancelEdit}
                 disabled={isLoading}
@@ -694,10 +699,10 @@ export default function PenempatanPage() {
           </div>
         </ModalBody>
         <ModalFooter className="px-6 py-4 flex justify-center gap-3 border-t border-gray-200">
-          <Button color="gray" onClick={() => setShowConfirmDelete(false)} disabled={isLoading}>
+          <Button type="button" color="gray" onClick={() => setShowConfirmDelete(false)} disabled={isLoading}>
             Batal
           </Button>
-          <Button color="red" onClick={handleDelete} disabled={isLoading}>
+          <Button type="button" color="red" onClick={handleDelete} disabled={isLoading}>
             {isLoading ? "Menghapus..." : "Ya, Hapus"}
           </Button>
         </ModalFooter>
