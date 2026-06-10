@@ -92,17 +92,22 @@ export default function Sidebar({ user }: { user: User }) {
             <p className="text-black text-xl font-bold mb-1 font-inter">Kelola Data</p>
             <div className="space-y-1">
               {role === "admin" && (
-                <>
-                  <MenuItem icon="/icons/logout.png" label="Data Guru"     href="/data-guru"    pathname={pathname} />
-                  <MenuItem icon="/icons/dudi.png"   label="Data DuDi"     href="/data-dudi"    pathname={pathname} />
-                  <MenuItem icon="/icons/periode.png" label="Data Periode"  href="/periode"      pathname={pathname} />
-                </>
+                <MenuItem icon="/icons/logout.png" label="Data User"   href="/kelola-user"  pathname={pathname} />
+              )}
+              {role === "admin" && (
+                <MenuItem icon="/icons/logout.png" label="Data Guru"     href="/data-guru"    pathname={pathname} />
               )}
               {(role === "admin" || role === "guru") && (
-                <>
-                  <MenuItem icon="/icons/logout.png" label="Data Siswa" href="/data-siswa" pathname={pathname} />
-                  <MenuItem icon="/icons/kelas.png" label="Data Kelas" href="/data-kelas" pathname={pathname} />
-                </>
+                <MenuItem icon="/icons/logout.png" label="Data Siswa"    href="/data-siswa"   pathname={pathname} />
+              )}
+              {role === "admin" && (
+                <MenuItem icon="/icons/dudi.png"   label="Data DuDi"     href="/data-dudi"    pathname={pathname} />
+              )}
+              {role === "admin" && (
+                <MenuItem icon="/icons/periode.png" label="Data Periode"  href="/periode"      pathname={pathname} />
+              )}
+              {(role === "admin" || role === "guru") && (
+                <MenuItem icon="/icons/kelas.png"   label="Data Kelas"    href="/data-kelas"   pathname={pathname} />
               )}
             </div>
           </div>

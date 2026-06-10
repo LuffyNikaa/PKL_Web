@@ -27,7 +27,7 @@ class DudiJurnalWebController extends Controller
 
         $query = JurnalHarian::with([
             'penempatan' => function ($q) {
-                $q->with(['siswa', 'dudi']);
+                $q->with(['siswa.kelas.jurusan', 'dudi']);
             }
         ])->whereHas('penempatan.dudi', function ($q) use ($dudiId) {
             $q->where('id_dudi', $dudiId);
@@ -61,10 +61,18 @@ class DudiJurnalWebController extends Controller
                 $siswa = $j->penempatan?->siswa;
                 $dudi = $j->penempatan?->dudi;
 
+                $tingkat = $siswa?->kelas?->tingkat_kelas ?? '';
+                $jurusan = $siswa?->kelas?->jurusan?->singkatan_jurusan ?? $siswa?->kelas?->jurusan?->nama_jurusan ?? '';
+                $rombel  = $siswa?->kelas?->rombel ?? '';
+                $kelasFormatted = trim(preg_replace('/\s+/', ' ', "$tingkat $jurusan $rombel"));
+                if (empty($kelasFormatted)) {
+                    $kelasFormatted = '-';
+                }
+
                 return [
                     'id_jurnal_harian' => $j->id_jurnal_harian,
                     'nama_siswa'       => $siswa?->nama_siswa ?? '-',
-                    'kelas_siswa'      => $siswa?->kelas?->tingkat_kelas . ' ' . ($siswa?->kelas?->rombel ?? ''),
+                    'kelas_siswa'      => $kelasFormatted,
                     'nama_dudi'        => $dudi?->nama_dudi ?? '-',
                     'tanggal'          => $j->tanggal_jurnal_harian
                                             ? $j->tanggal_jurnal_harian->format('d-m-Y')

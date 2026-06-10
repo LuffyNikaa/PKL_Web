@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\GuruController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterDudiController;
@@ -131,6 +132,13 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         Route::post('/admin/dudi', [DudiController::class, 'store']);
         Route::put('/admin/dudi/{id}', [DudiController::class, 'update']);
         Route::delete('/admin/dudi/{id}', [DudiController::class, 'destroy']);
+
+        // Users Management
+        Route::get('/admin/users/unlinked', [UserController::class, 'unlinked']);
+        Route::get('/admin/users', [UserController::class, 'index']);
+        Route::post('/admin/users', [UserController::class, 'store']);
+        Route::put('/admin/users/{id}', [UserController::class, 'update']);
+        Route::delete('/admin/users/{id}', [UserController::class, 'destroy']);
     });
 
     // =====================
@@ -152,5 +160,7 @@ Route::middleware(['auth:sanctum', 'check.status'])->group(function () {
         
         Route::get('/monitoring', [MonitoringController::class, 'mySiswa']);
         Route::get('/presentasi', [PresentasiController::class, 'mySiswa']);
+        Route::get('/jurusan', [JurusanController::class, 'index']);
+        Route::get('/kelas', [KelasController::class, 'index']);
     });
 });

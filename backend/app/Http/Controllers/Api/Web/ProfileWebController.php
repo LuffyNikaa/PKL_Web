@@ -4,6 +4,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Guru;
 use App\Models\Siswa;
+use App\Models\Kelas;
+use App\Models\Jurusan;
 
 class ProfileWebController extends Controller
 {
@@ -83,18 +85,46 @@ class ProfileWebController extends Controller
 
             // ===== SISWA =====
             if ($user->role_users === 'siswa') {
+                $siswa = Siswa::where('id_users', $user->id_users)->first();
+                if (!$siswa) {
+                    return response()->json(['message' => 'Data siswa tidak ditemukan'], 404);
+                }
+
                 $request->validate([
-                    'nama'   => 'required|string|max:60',
-                    'no_hp'  => 'nullable|string|max:15',
-                    'alamat' => 'nullable|string',
+                    'nama'     => 'required|string|max:60',
+                    'email'    => 'required|email|unique:users,email_users,' . $user->id_users . ',id_users',
+                    'no_hp'    => 'nullable|string|max:15',
+                    'alamat'   => 'nullable|string',
+                    'nis'      => 'required|string|max:20|unique:siswa,nis_siswa,' . $siswa->id_siswa . ',id_siswa',
+                    'id_kelas' => 'required|exists:kelas,id_kelas',
+                    'password' => 'nullable|string|min:6',
+                ], [
+                    'nama.required' => 'Nama wajib diisi',
+                    'email.required' => 'Email wajib diisi',
+                    'email.email' => 'Format email tidak valid',
+                    'email.unique' => 'Email sudah digunakan',
+                    'nis.required' => 'NIS wajib diisi',
+                    'nis.unique' => 'NIS sudah digunakan',
+                    'id_kelas.required' => 'Kelas wajib diisi',
+                    'id_kelas.exists' => 'Kelas tidak valid',
+                    'password.min' => 'Password minimal 6 karakter',
                 ]);
 
-                $user->update(['nama_users' => $request->nama]);
+                $userFields = [
+                    'nama_users' => $request->nama,
+                    'email_users' => $request->email,
+                ];
+                if ($request->filled('password')) {
+                    $userFields['password_users'] = \Illuminate\Support\Facades\Hash::make($request->password);
+                }
+                $user->update($userFields);
 
-                Siswa::where('id_users', $user->id_users)->update([
+                $siswa->update([
                     'nama_siswa'   => $request->nama,
                     'no_siswa'     => $request->no_hp,
                     'alamat_siswa' => $request->alamat,
+                    'nis_siswa'    => $request->nis,
+                    'id_kelas'     => $request->id_kelas,
                 ]);
 
                 return response()->json(['message' => 'Profil berhasil diperbarui']);

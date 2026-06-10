@@ -97,9 +97,10 @@ class JurnalMingguanController extends Controller
         try {
             $request->validate([
                 'kegiatan_jurnal_mingguan'  => 'required|string',
-                'dokumentasi_jurnal_mingguan' => 'nullable|file|mimes:jpg,jpeg,png|max:3072',
+                'dokumentasi_jurnal_mingguan' => 'required|file|mimes:jpg,jpeg,png|max:3072',
             ], [
                 'kegiatan_jurnal_mingguan.required' => 'Kegiatan wajib diisi',
+                'dokumentasi_jurnal_mingguan.required' => 'Dokumentasi wajib ditambahkan',
                 'dokumentasi_jurnal_mingguan.mimes' => 'Foto harus berformat JPG atau PNG',
                 'dokumentasi_jurnal_mingguan.max'   => 'Ukuran foto maksimal 3MB',
             ]);
@@ -177,7 +178,11 @@ class JurnalMingguanController extends Controller
         try {
             $request->validate([
                 'kegiatan_jurnal_mingguan'    => 'required|string',
-                'dokumentasi_jurnal_mingguan' => 'nullable|file|mimes:jpg,jpeg,png|max:3072',  // ✅ nullable
+                'dokumentasi_jurnal_mingguan' => 'nullable|file|mimes:jpg,jpeg,png|max:3072',
+            ], [
+                'kegiatan_jurnal_mingguan.required' => 'Kegiatan wajib diisi',
+                'dokumentasi_jurnal_mingguan.mimes' => 'Foto harus berformat JPG atau PNG',
+                'dokumentasi_jurnal_mingguan.max'   => 'Ukuran foto maksimal 3MB',
             ]);
 
             $user   = $request->user();
@@ -215,6 +220,13 @@ class JurnalMingguanController extends Controller
             
             if (!now()->between($senin, $minggu)) {
                 return response()->json(['message' => 'Jurnal hanya bisa diedit dalam minggu yang sama'], 422);
+            }
+
+            // Validasi dokumentasi wajib ada (baik file lama atau upload baru)
+            if (!$jurnal->dokumentasi_jurnal_mingguan && !$request->hasFile('dokumentasi_jurnal_mingguan')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'dokumentasi_jurnal_mingguan' => ['Dokumentasi wajib ditambahkan'],
+                ]);
             }
 
             // Update kegiatan

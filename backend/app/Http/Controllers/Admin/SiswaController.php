@@ -33,7 +33,13 @@ class SiswaController extends Controller
 
             return response()->json([
                 'data' => $siswa->map(function ($s) {
-                    $kelasName = $s->kelas ? $s->kelas->tingkat_kelas . ' ' . $s->kelas->rombel : '-';
+                    $tingkat = $s->kelas?->tingkat_kelas ?? '';
+                    $jurusan = $s->kelas?->jurusan?->singkatan_jurusan ?? $s->kelas?->jurusan?->nama_jurusan ?? '';
+                    $rombel  = $s->kelas?->rombel ?? '';
+                    $kelasName = trim(preg_replace('/\s+/', ' ', "$tingkat $jurusan $rombel"));
+                    if (empty($kelasName)) {
+                        $kelasName = '-';
+                    }
                     
                     // Ambil penempatan aktif (latest)
                     $penempatan = $s->penempatan?->sortByDesc('id_penempatan')->first();
@@ -84,10 +90,8 @@ class SiswaController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'id_users'     => 'required|integer|unique:siswa,id_users',
             'nama_siswa'   => 'required|string|max:60',
-            'email'        => 'required|email|unique:users,email_users',
-            'password'     => 'required|min:6',
-            'status_users' => 'required|in:aktif,nonaktif',
             'jk_siswa'     => 'required|in:laki-laki,perempuan',
             'id_kelas'     => 'required|exists:kelas,id_kelas',
             'nis_siswa'    => 'required|string|max:20|unique:siswa,nis_siswa',
@@ -102,19 +106,9 @@ class SiswaController extends Controller
             ], 422);
         }
 
-        DB::beginTransaction();
-
         try {
-            $user = Users::create([
-                'nama_users'     => $request->nama_siswa,
-                'email_users'    => $request->email,
-                'password_users' => Hash::make($request->password),
-                'role_users'     => 'siswa',
-                'status_users'   => $request->status_users,
-            ]);
-
             $siswa = Siswa::create([
-                'id_users'     => $user->id_users,
+                'id_users'     => $request->id_users,
                 'id_kelas'     => $request->id_kelas,
                 'nama_siswa'   => $request->nama_siswa,
                 'jk_siswa'     => $request->jk_siswa,
@@ -123,15 +117,12 @@ class SiswaController extends Controller
                 'no_siswa'     => $request->no_siswa,
             ]);
 
-            DB::commit();
-
             return response()->json([
                 'message' => 'Siswa berhasil ditambahkan',
                 'data'    => $siswa
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menambahkan siswa',
                 'error'   => $e->getMessage()
@@ -154,7 +145,6 @@ class SiswaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'nama_siswa'   => 'required|string|max:60',
-            'status_users' => 'required|in:aktif,nonaktif',
             'jk_siswa'     => 'required|in:laki-laki,perempuan',
             'id_kelas'     => 'required|exists:kelas,id_kelas',
             'alamat_siswa' => 'required|string',
@@ -169,8 +159,6 @@ class SiswaController extends Controller
             ], 422);
         }
 
-        DB::beginTransaction();
-
         try {
             $siswa->update([
                 'id_kelas'     => $request->id_kelas,
@@ -181,22 +169,11 @@ class SiswaController extends Controller
                 'nis_siswa'    => $request->nis_siswa,
             ]);
 
-            $user = Users::find($siswa->id_users);
-            if ($user) {
-                $user->update([
-                    'nama_users'   => $request->nama_siswa,
-                    'status_users' => $request->status_users,
-                ]);
-            }
-
-            DB::commit();
-
             return response()->json([
                 'message' => 'Siswa berhasil diperbarui'
             ], 200);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'message' => 'Gagal memperbarui siswa',
                 'error'   => $e->getMessage()
@@ -217,20 +194,13 @@ class SiswaController extends Controller
             ], 404);
         }
 
-        DB::beginTransaction();
-
         try {
-            $idUser = $siswa->id_users;
             $siswa->delete();
-            Users::where('id_users', $idUser)->delete();
-            DB::commit();
-
             return response()->json([
                 'message' => 'Siswa berhasil dihapus'
             ], 200);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'message' => 'Gagal menghapus siswa',
                 'error'   => $e->getMessage()
@@ -296,8 +266,14 @@ class SiswaController extends Controller
                     'no_hp'         => $siswa->no_siswa,
                     
                     // Data kelas & jurusan
+                    'id_kelas'      => $siswa->id_kelas,
+                    'id_jurusan'    => $siswa->kelas?->id_jurusan,
                     'jurusan'       => $siswa->kelas?->jurusan?->nama_jurusan,
-                    'kelas'         => trim(($siswa->kelas?->tingkat_kelas ?? '') . ' ' . ($siswa->kelas?->rombel ?? '')),
+                    'kelas'         => trim(implode(' ', array_filter([
+                        $siswa->kelas?->tingkat_kelas,
+                        $siswa->kelas?->jurusan?->nama_jurusan,
+                        $siswa->kelas?->rombel
+                    ]))),
                     
                     // Data DUDI dari penempatan aktif (PENTING untuk presensi)
                     'dudi'          => $dudiData['nama_dudi'] ?? null,
