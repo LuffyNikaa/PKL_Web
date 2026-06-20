@@ -83,6 +83,7 @@ export default function DataSiswaPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [role, setRole] = useState<string>("");
 
   const [search, setSearch] = useState("");
   const [filterKelas, setFilterKelas] = useState("all");
@@ -134,6 +135,9 @@ export default function DataSiswaPage() {
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
+
+    const savedRole = localStorage.getItem("role");
+    if (savedRole) setRole(savedRole);
   }, []);
 
   const fetchSiswa = async () => {
@@ -387,12 +391,14 @@ export default function DataSiswaPage() {
           <div className="bg-white rounded-xl p-6 flex flex-col min-h-[600px]">
             <h1 className="text-lg font-semibold mb-4">Daftar Data Siswa</h1>
 
-            <button
-              onClick={openTambahModal}
-              className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm w-fit transition-all duration-200"
-            >
-              Tambah Siswa <span className="text-lg">+</span>
-            </button>
+            {role === "admin" && (
+              <button
+                onClick={openTambahModal}
+                className="mb-4 inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm w-fit transition-all duration-200"
+              >
+                Tambah Siswa <span className="text-lg">+</span>
+              </button>
+            )}
 
             {/* Search & Filter */}
             <div className="flex items-center gap-3 mb-5">
@@ -595,9 +601,6 @@ export default function DataSiswaPage() {
                       </option>
                     ))}
                   </Select>
-                  <p className="text-gray-400 text-xs italic mt-1 font-inter">
-                    * Hanya menampilkan akun login ber-role Siswa yang profilnya belum dibuat.
-                  </p>
                 </div>
 
                 <div>
@@ -673,28 +676,28 @@ export default function DataSiswaPage() {
                     ))}
                   </Select>
                 </div>
-
-                <div>
-                  <Label htmlFor="id_kelas">Kelas *</Label>
-                  <Select
-                    id="id_kelas"
-                    name="id_kelas"
-                    value={form.id_kelas}
-                    onChange={handleFormChange}
-                    required
-                    disabled={!selectedJurusanForm}
-                  >
-                    <option value="">Pilih kelas</option>
-                    {kelas
-                      .filter((k) => k.jurusan?.nama_jurusan === selectedJurusanForm)
-                      .map((k) => (
-                        <option key={k.id_kelas} value={k.id_kelas}>
-                          {`${k.tingkat_kelas} ${k.jurusan?.nama_jurusan || ""} ${k.rombel}`.replace(/\s+/g, " ").trim()}
-                        </option>
-                      ))}
-                  </Select>
-                </div>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="id_kelas">Kelas *</Label>
+              <Select
+                id="id_kelas"
+                name="id_kelas"
+                value={form.id_kelas}
+                onChange={handleFormChange}
+                required
+                disabled={!selectedJurusanForm}
+              >
+                <option value="">Pilih kelas</option>
+                {kelas
+                  .filter((k) => k.jurusan?.nama_jurusan === selectedJurusanForm)
+                  .map((k) => (
+                    <option key={k.id_kelas} value={k.id_kelas}>
+                      {`${k.tingkat_kelas} ${k.jurusan?.nama_jurusan || ""} ${k.rombel}`.replace(/\s+/g, " ").trim()}
+                    </option>
+                  ))}
+              </Select>
             </div>
 
             <div>
@@ -837,20 +840,20 @@ export default function DataSiswaPage() {
                         ))}
                     </Select>
                   </div>
-
-                  {!isEditMode && (
-                    <div>
-                      <Label htmlFor="edit_email_users">Email Login (Read-Only)</Label>
-                      <TextInput
-                        id="edit_email_users"
-                        value={selectedSiswa.user?.email_users || "Belum ada akun"}
-                        readOnly
-                        className="bg-gray-100"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
+
+              {!isEditMode && (
+                <div>
+                  <Label htmlFor="edit_email_users">Email Login (Read-Only)</Label>
+                  <TextInput
+                    id="edit_email_users"
+                    value={selectedSiswa.user?.email_users || "Belum ada akun"}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="edit_alamat_siswa">Alamat</Label>
@@ -869,14 +872,20 @@ export default function DataSiswaPage() {
 
         <ModalFooter className="px-6 py-4 flex justify-between border-t border-gray-200">
           {!isEditMode ? (
-            <>
-              <Button type="button" color="blue" onClick={handleEditSiswa}>
-                Edit Profil
+            role === "admin" ? (
+              <>
+                <Button type="button" color="blue" onClick={handleEditSiswa}>
+                  Edit Profil
+                </Button>
+                <Button type="button" color="red" onClick={() => setShowConfirmDelete(true)}>
+                  Hapus Profil
+                </Button>
+              </>
+            ) : (
+              <Button type="button" color="gray" onClick={() => setShowDetailModal(false)}>
+                Tutup
               </Button>
-              <Button type="button" color="red" onClick={() => setShowConfirmDelete(true)}>
-                Hapus Profil
-              </Button>
-            </>
+            )
           ) : (
             <>
               <Button form="edit-siswa-form" type="submit" color="blue">

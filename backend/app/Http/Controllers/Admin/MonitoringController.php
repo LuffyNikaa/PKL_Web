@@ -13,7 +13,19 @@ class MonitoringController extends Controller
     // GET /api/admin/monitoring
     public function index(Request $request)
     {
+        $user = $request->user();
         $query = Monitoring::with(['penempatan.siswa.kelas.jurusan', 'penempatan.dudi', 'penempatan.guru']);
+
+        if ($user && $user->role_users === 'guru') {
+            $guru = Guru::where('id_users', $user->id_users)->first();
+            if ($guru) {
+                $query->whereHas('penempatan', function ($q) use ($guru) {
+                    $q->where('id_guru', $guru->id_guru);
+                });
+            } else {
+                return response()->json(['data' => []], 200);
+            }
+        }
 
         if ($request->filled('nama')) {
             $query->whereHas('penempatan.siswa', fn($q) =>

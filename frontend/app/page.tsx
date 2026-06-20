@@ -9,9 +9,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError('')
     try {
       const res = await fetch('http://localhost:8000/api/login/web', {
         method: 'POST',
@@ -23,6 +26,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.message || 'Login gagal')
+        setIsLoading(false)
         return
       }
 
@@ -34,6 +38,7 @@ export default function LoginPage() {
       router.push('/dashboard')
     } catch (err) {
       setError('Server error')
+      setIsLoading(false)
     }
   }
 
@@ -125,9 +130,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3 rounded-lg font-semibold text-[15px] font-inter mt-6 tracking-wide transition duration-200"
+            disabled={isLoading}
+            className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold text-[15px] font-inter mt-6 tracking-wide transition duration-200"
           >
-            Masuk
+            {isLoading ? 'Masuk...' : 'Masuk'}
           </button>
         </form>
       </div>

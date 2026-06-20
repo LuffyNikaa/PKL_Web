@@ -12,7 +12,19 @@ class JurnalMingguanWebController extends Controller
     // GET /api/admin/jurnal-mingguan
     public function index(Request $request)
     {
+        $user = $request->user();
         $query = JurnalMingguan::with(['penempatan.siswa.kelas.jurusan', 'penempatan.dudi']);
+
+        if ($user && $user->role_users === 'guru') {
+            $guru = \App\Models\Guru::where('id_users', $user->id_users)->first();
+            if ($guru) {
+                $query->whereHas('penempatan', function ($q) use ($guru) {
+                    $q->where('id_guru', $guru->id_guru);
+                });
+            } else {
+                return response()->json(['data' => []], 200);
+            }
+        }
 
         if ($request->filled('nama')) {
             $query->whereHas('penempatan.siswa', function ($q) use ($request) {

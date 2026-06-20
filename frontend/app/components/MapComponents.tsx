@@ -18,7 +18,7 @@ const MapComponent = ({
   isAddMode: boolean;
 }) => {
   // Gunakan nilai awal sebagai ref sehingga MapContainer tidak di-reset saat state berubah
-  const initialCenter = useRef<[number, number]>(latLng || [-7.250445, 112.768845]);
+  const initialCenter = useRef<[number, number]>(latLng || [-7.654316, 111.328328]);
   const initialZoom = useRef<number>(10);
 
   const [position, setPosition] = useState<[number, number]>(initialCenter.current);

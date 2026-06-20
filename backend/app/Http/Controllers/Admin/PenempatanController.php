@@ -12,17 +12,27 @@ class PenempatanController extends Controller
     // =========================
     // GET ALL
     // =========================
-    public function index()
+    public function index(Request $request)
     {
-        $penempatan = Penempatan::with([
+        $user = $request->user();
+        $query = Penempatan::with([
             'siswa.user',
             'siswa.kelas.jurusan',
             'dudi',
             'guru',
             'periode'
-        ])
-        ->orderBy('id_penempatan', 'desc')
-        ->get();
+        ]);
+
+        if ($user && $user->role_users === 'guru') {
+            $guru = \App\Models\Guru::where('id_users', $user->id_users)->first();
+            if ($guru) {
+                $query->where('id_guru', $guru->id_guru);
+            } else {
+                return response()->json(['data' => []], 200);
+            }
+        }
+
+        $penempatan = $query->orderBy('id_penempatan', 'desc')->get();
 
         return response()->json([
             'data' => $penempatan

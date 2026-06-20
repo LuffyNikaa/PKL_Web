@@ -451,9 +451,6 @@ export default function DataGuruPage() {
                       </option>
                     ))}
                   </Select>
-                  <p className="text-gray-400 text-xs italic mt-1">
-                    * Hanya menampilkan akun login ber-role Guru yang profilnya belum dibuat.
-                  </p>
                 </div>
 
                 <div>

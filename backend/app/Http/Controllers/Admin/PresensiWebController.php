@@ -9,6 +9,8 @@ class PresensiWebController extends Controller
     // GET /api/admin/presensi
     public function index(Request $request)
     {
+        $user = $request->user();
+
         // Load presensi dengan relasi penempatan > siswa > kelas > jurusan & penempatan > dudi
         $query = Presensi::with([
             'penempatan' => function ($q) {
@@ -20,6 +22,17 @@ class PresensiWebController extends Controller
                 ]);
             }
         ]);
+
+        if ($user && $user->role_users === 'guru') {
+            $guru = \App\Models\Guru::where('id_users', $user->id_users)->first();
+            if ($guru) {
+                $query->whereHas('penempatan', function ($q) use ($guru) {
+                    $q->where('id_guru', $guru->id_guru);
+                });
+            } else {
+                return response()->json(['data' => []], 200);
+            }
+        }
 
         // Filter status
         if ($request->filled('status')) {

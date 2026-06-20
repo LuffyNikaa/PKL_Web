@@ -19,17 +19,30 @@ class SiswaController extends Controller
     // =====================
     // GET /api/admin/siswa
     // =====================
-    public function index()
+    public function index(Request $request)
     {
         try {
-             $siswa = Siswa::with([
+            $user = $request->user();
+            
+            $query = Siswa::with([
                 'kelas.jurusan',
                 'penempatan.dudi',
                 'penempatan.periode',
                 'user'
-             ])
-             ->orderBy('id_siswa', 'desc')
-             ->get();
+            ]);
+
+            if ($user && $user->role_users === 'guru') {
+                $guru = \App\Models\Guru::where('id_users', $user->id_users)->first();
+                if ($guru) {
+                    $query->whereHas('penempatan', function ($q) use ($guru) {
+                        $q->where('id_guru', $guru->id_guru);
+                    });
+                } else {
+                    return response()->json(['data' => []], 200);
+                }
+            }
+
+            $siswa = $query->orderBy('id_siswa', 'desc')->get();
 
             return response()->json([
                 'data' => $siswa->map(function ($s) {

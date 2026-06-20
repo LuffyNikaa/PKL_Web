@@ -9,6 +9,8 @@ class JurnalHarianWebController extends Controller
     // GET /api/admin/jurnal-harian
     public function index(Request $request)
     {
+        $user = $request->user();
+
         // Load jurnal dengan relasi penempatan > siswa > kelas > jurusan & penempatan > dudi & approver
         $query = JurnalHarian::with([
             'penempatan' => function ($q) {
@@ -21,6 +23,17 @@ class JurnalHarianWebController extends Controller
             },
             'approver'
         ]);
+
+        if ($user && $user->role_users === 'guru') {
+            $guru = \App\Models\Guru::where('id_users', $user->id_users)->first();
+            if ($guru) {
+                $query->whereHas('penempatan', function ($q) use ($guru) {
+                    $q->where('id_guru', $guru->id_guru);
+                });
+            } else {
+                return response()->json(['data' => []], 200);
+            }
+        }
 
         // Filter nama siswa
         if ($request->filled('nama')) {

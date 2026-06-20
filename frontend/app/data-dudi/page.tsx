@@ -404,8 +404,8 @@ export default function DataDudiPage() {
               <MapComponent
                 onLocationSelect={handleLocationSelect}
                 latLng={[
-                  form.latitude_dudi ? Number(form.latitude_dudi) : -7.250445,
-                  form.longitude_dudi ? Number(form.longitude_dudi) : 112.768845,
+                  form.latitude_dudi ? Number(form.latitude_dudi) : -7.654316,
+                  form.longitude_dudi ? Number(form.longitude_dudi) : 111.328328,
                 ]}
                 isEditing={false}
                 isAddMode={true}
@@ -492,10 +492,10 @@ export default function DataDudiPage() {
                   latLng={[
                     form.latitude_dudi
                       ? Number(form.latitude_dudi)
-                      : Number(selectedDudi.latitude_dudi) || -7.250445,
+                      : Number(selectedDudi.latitude_dudi) || -7.654316,
                     form.longitude_dudi
                       ? Number(form.longitude_dudi)
-                      : Number(selectedDudi.longitude_dudi) || 112.768845,
+                      : Number(selectedDudi.longitude_dudi) || 111.328328,
                   ]}
                   isEditing={isEditMode}
                   isAddMode={false}
