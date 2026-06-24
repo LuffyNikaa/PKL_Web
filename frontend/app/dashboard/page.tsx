@@ -46,7 +46,6 @@ export default function DashboardPage() {
     if (userData) {
       setUser(JSON.parse(userData));
     } else {
-      // Retry memuat user jika terjadi race-condition saat redirect login
       setTimeout(() => {
         const retryUserData = localStorage.getItem("user");
         if (retryUserData) {
